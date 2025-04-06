@@ -8,11 +8,13 @@ import {
 } from "../stravaClient.js";
 // formatDuration is now local or in utils, not imported from server.ts
 
-// Input schema (no arguments needed)
-const GetAthleteStatsInputSchema = z.object({});
+// Input schema: Now requires athleteId
+const GetAthleteStatsInputSchema = z.object({
+    athleteId: z.number().int().positive().describe("The unique identifier of the athlete to fetch stats for.")
+});
 
-// Remove type alias as input parameter is removed
-// type GetAthleteStatsInput = z.infer<typeof GetAthleteStatsInputSchema>;
+// Define type alias for input
+type GetAthleteStatsInput = z.infer<typeof GetAthleteStatsInputSchema>;
 
 // Remove unused formatDuration function
 /*
@@ -111,12 +113,10 @@ function formatStats(stats: StravaStats): string {
 // Tool definition
 export const getAthleteStatsTool = {
     name: "get-athlete-stats",
-    description: "Fetches the activity statistics (recent, YTD, all-time) for the authenticated athlete.",
+    description: "Fetches the activity statistics (recent, YTD, all-time) for a specific athlete using their ID.",
     inputSchema: GetAthleteStatsInputSchema,
-    // Remove input parameter from execute signature
-    execute: async () => {
+    execute: async ({ athleteId }: GetAthleteStatsInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
-        const athleteId = process.env.STRAVA_ATHLETE_ID;
 
         if (!token) {
              console.error("Missing STRAVA_ACCESS_TOKEN environment variable.");
@@ -125,35 +125,20 @@ export const getAthleteStatsTool = {
                 isError: true
             };
         }
-         if (!athleteId) {
-             console.error("Missing STRAVA_ATHLETE_ID environment variable.");
-             return {
-                content: [{ type: "text" as const, text: "Configuration error: Missing Strava athlete ID." }],
-                isError: true
-            };
-        }
-        const numericAthleteId = parseInt(athleteId, 10);
-        if (isNaN(numericAthleteId)) {
-             console.error(`Invalid STRAVA_ATHLETE_ID: ${athleteId}`);
-             return {
-                content: [{ type: "text" as const, text: "Configuration error: Invalid Strava athlete ID format." }],
-                isError: true
-             };
-        }
 
         try {
-            console.error(`Fetching stats for athlete ${numericAthleteId}...`);
-            const stats = await fetchAthleteStats(token, numericAthleteId);
+            console.error(`Fetching stats for athlete ${athleteId}...`);
+            const stats = await fetchAthleteStats(token, athleteId);
             const formattedStats = formatStats(stats);
 
-            console.error(`Successfully fetched stats for athlete ${numericAthleteId}.`);
+            console.error(`Successfully fetched stats for athlete ${athleteId}.`);
             return { content: [{ type: "text" as const, text: formattedStats }] };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`Error fetching stats for athlete ${numericAthleteId}: ${errorMessage}`);
+            console.error(`Error fetching stats for athlete ${athleteId}: ${errorMessage}`);
             const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
-                ? `Athlete with ID ${numericAthleteId} not found (when fetching stats).`
-                : `An unexpected error occurred while fetching stats for athlete ${numericAthleteId}. Details: ${errorMessage}`;
+                ? `Athlete with ID ${athleteId} not found (when fetching stats).`
+                : `An unexpected error occurred while fetching stats for athlete ${athleteId}. Details: ${errorMessage}`;
             return {
                 content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
                 isError: true
