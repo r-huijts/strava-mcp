@@ -1,8 +1,8 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+// import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import {
     getAuthenticatedAthlete,
-    getSegmentById,
+    getSegmentById as fetchSegmentById, // Renamed import
     StravaDetailedSegment
 } from "../stravaClient.js";
 
@@ -10,7 +10,9 @@ const GetSegmentInputSchema = z.object({
     segmentId: z.number().int().positive().describe("The unique identifier of the segment to fetch."),
 });
 
-// Helper Function (copied from server.ts, could be moved to a shared utils.ts)
+type GetSegmentInput = z.infer<typeof GetSegmentInputSchema>;
+
+// Helper Function (kept local)
 function formatSegmentDetails(segment: StravaDetailedSegment, units: 'feet' | 'meters'): string {
     const distanceFactor = units === 'feet' ? 0.000621371 : 0.001;
     const distanceUnit = units === 'feet' ? 'mi' : 'km';
@@ -47,40 +49,50 @@ function formatSegmentDetails(segment: StravaDetailedSegment, units: 'feet' | 'm
     return parts.filter(part => part !== '').join('\n');
 }
 
+// Export the tool definition directly
+export const getSegment = {
+    name: "get-segment",
+    description: "Fetches detailed information about a specific segment using its ID.",
+    inputSchema: GetSegmentInputSchema,
+    execute: async ({ segmentId }: GetSegmentInput) => {
+        const token = process.env.STRAVA_ACCESS_TOKEN;
+
+        if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
+            console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
+            return {
+                content: [{ type: "text" as const, text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
+                isError: true,
+            };
+        }
+
+        try {
+            console.error(`Fetching details for segment ID: ${segmentId}...`);
+            const athlete = await getAuthenticatedAthlete(token); // For measurement preference
+            const segment = await fetchSegmentById(token, segmentId);
+            console.error(`Successfully fetched details for segment: ${segment.name}`);
+
+            const segmentDetailsText = formatSegmentDetails(segment, athlete.measurement_preference);
+
+            return { content: [{ type: "text" as const, text: segmentDetailsText }] };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+            console.error(`Error in get-segment tool for ID ${segmentId}:`, errorMessage);
+            return {
+                content: [{ type: "text" as const, text: `❌ API Error: ${errorMessage}` }],
+                isError: true,
+            };
+        }
+    }
+};
+
+// Removed old registration function
+/*
 export function registerGetSegmentTool(server: McpServer) {
     server.tool(
-        "get-segment",
-        "Fetches detailed information about a specific segment using its ID.",
-        GetSegmentInputSchema.shape,
-        async (params, _extra) => {
-            const { segmentId } = params;
-            const token = process.env.STRAVA_ACCESS_TOKEN;
-
-            if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
-                console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
-                return {
-                    content: [{ type: "text", text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
-                    isError: true,
-                };
-            }
-
-            try {
-                console.error(`Fetching details for segment ID: ${segmentId}...`);
-                const athlete = await getAuthenticatedAthlete(token); // For measurement preference
-                const segment = await getSegmentById(token, segmentId);
-                console.error(`Successfully fetched details for segment: ${segment.name}`);
-
-                const segmentDetailsText = formatSegmentDetails(segment, athlete.measurement_preference);
-
-                return { content: [{ type: "text", text: segmentDetailsText }] };
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-                console.error(`Error in get-segment tool for ID ${segmentId}:`, errorMessage);
-                return {
-                    content: [{ type: "text", text: `❌ API Error: ${errorMessage}` }],
-                    isError: true,
-                };
-            }
-        }
+        getSegment.name,
+        getSegment.description,
+        getSegment.inputSchema.shape,
+        getSegment.execute
     );
-} 
+}
+*/ 

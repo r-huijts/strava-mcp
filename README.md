@@ -184,6 +184,61 @@ Lists the authenticated athlete's efforts on a given segment, optionally filtere
 -   "Show my efforts on segment 987654 after January 1st, 2023."
 -   "Get my 5 most recent efforts for segment 112233."
 
+### `list-athlete-routes`
+
+Lists the routes created by the authenticated athlete.
+
+-   **Input Parameters:**
+    -   `page` (optional, number): Page number for pagination.
+    -   `perPage` (optional, number): Number of routes per page (default 30).
+-   **Output:** A formatted text list of the athlete's routes, including name, ID, type, distance, elevation gain, and creation date.
+
+#### Example Natural Language Queries for LLMs
+
+-   "List my Strava routes."
+-   "Show me the routes I created."
+-   "Get the second page of my routes."
+
+### `get-route`
+
+Fetches detailed information for a specific route using its ID.
+
+-   **Input Parameters:**
+    -   `routeId` (required, number): The unique identifier of the route to fetch.
+-   **Output:** A formatted text string containing route details, including name, ID, type, distance, elevation gain, estimated time, creation date, description, and number of segments.
+
+#### Example Natural Language Queries for LLMs
+
+-   "Get details for route 1234567."
+-   "Show me the info for route 987654."
+-   "What is the distance of route 112233?"
+
+### `export-route-gpx`
+
+Exports a specific route in GPX format and saves it to a pre-configured local directory on the server machine. **Note:** This requires the `ROUTE_EXPORT_PATH` environment variable to be set correctly.
+
+-   **Input Parameters:**
+    -   `routeId` (required, number): The unique identifier of the route to export.
+-   **Output:** A success message indicating the file path where the GPX file was saved, or an error message if saving failed.
+
+#### Example Natural Language Queries for LLMs
+
+-   "Export route 1234567 as GPX."
+-   "Save the GPX file for route 987654."
+
+### `export-route-tcx`
+
+Exports a specific route in TCX format and saves it to a pre-configured local directory on the server machine. **Note:** This requires the `ROUTE_EXPORT_PATH` environment variable to be set correctly.
+
+-   **Input Parameters:**
+    -   `routeId` (required, number): The unique identifier of the route to export.
+-   **Output:** A success message indicating the file path where the TCX file was saved, or an error message if saving failed.
+
+#### Example Natural Language Queries for LLMs
+
+-   "Export route 1234567 as TCX."
+-   "Save the TCX file for route 987654."
+
 ## Setup and Usage
 
 ### 1. Prerequisites
@@ -210,9 +265,16 @@ This server requires a Strava API access token to authenticate requests.
     # Strava API Access Token
     # Get yours from https://www.strava.com/settings/api
     STRAVA_ACCESS_TOKEN=YOUR_COPIED_ACCESS_TOKEN_HERE
+
+    # Optional: Define a path for saving exported route files (GPX/TCX)
+    # Ensure this directory exists and the server process has write permissions.
+    # Example: ROUTE_EXPORT_PATH=/Users/your_username/strava-exports
+    ROUTE_EXPORT_PATH=
     ```
 
     **Important:** Replace `YOUR_COPIED_ACCESS_TOKEN_HERE` with the actual token you copied from the Strava settings page.
+
+    **Optional:** If you intend to use the `export-route-gpx` or `export-route-tcx` tools, you **must** set `ROUTE_EXPORT_PATH` to a valid, writable directory path on the machine where the server will run. The server will save exported files (e.g., `route-12345.gpx`) directly into this folder.
 
 ### 4. Install Dependencies
 

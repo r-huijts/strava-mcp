@@ -1,8 +1,8 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+// import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import {
     getAuthenticatedAthlete,
-    exploreSegments,
+    exploreSegments as fetchExploreSegments, // Renamed import
     StravaExplorerResponse
 } from "../stravaClient.js";
 
@@ -19,50 +19,49 @@ const ExploreSegmentsInputSchema = z.object({
         .describe("Filter by maximum climb category (optional, 0-5). Requires riding activityType."),
 });
 
-export function registerExploreSegmentsTool(server: McpServer) {
-    server.tool(
-        "explore-segments",
-        "Searches for popular segments within a given geographical area.",
-        ExploreSegmentsInputSchema.shape,
-        async (params, _extra) => {
-            const { bounds, activityType, minCat, maxCat } = params;
-            const token = process.env.STRAVA_ACCESS_TOKEN;
+type ExploreSegmentsInput = z.infer<typeof ExploreSegmentsInputSchema>;
 
-            if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
-                console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
-                return {
-                    content: [{ type: "text", text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
-                    isError: true,
-                };
+// Export the tool definition directly
+export const exploreSegments = {
+    name: "explore-segments",
+    description: "Searches for popular segments within a given geographical area.",
+    inputSchema: ExploreSegmentsInputSchema,
+    execute: async ({ bounds, activityType, minCat, maxCat }: ExploreSegmentsInput) => {
+        const token = process.env.STRAVA_ACCESS_TOKEN;
+
+        if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
+            console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
+            return {
+                content: [{ type: "text" as const, text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
+                isError: true,
+            };
+        }
+        if ((minCat !== undefined || maxCat !== undefined) && activityType !== 'riding') {
+            return {
+                content: [{ type: "text" as const, text: "❌ Input Error: Climb category filters (minCat, maxCat) require activityType to be 'riding'." }],
+                isError: true,
+            };
+        }
+
+        try {
+            console.error(`Exploring segments within bounds: ${bounds}...`);
+            const athlete = await getAuthenticatedAthlete(token);
+            const response: StravaExplorerResponse = await fetchExploreSegments(token, bounds, activityType, minCat, maxCat);
+            console.error(`Found ${response.segments?.length ?? 0} segments.`);
+
+            if (!response.segments || response.segments.length === 0) {
+                return { content: [{ type: "text" as const, text: " MNo segments found in the specified area with the given filters." }] };
             }
-            if ((minCat !== undefined || maxCat !== undefined) && activityType !== 'riding') {
-                return {
-                    content: [{ type: "text", text: "❌ Input Error: Climb category filters (minCat, maxCat) require activityType to be 'riding'." }],
-                    isError: true,
-                };
-            }
 
-            try {
-                console.error(`Exploring segments within bounds: ${bounds}...`);
-                // Need athlete preference for formatting results
-                const athlete = await getAuthenticatedAthlete(token);
-                const response: StravaExplorerResponse = await exploreSegments(token, bounds, activityType, minCat, maxCat);
-                console.error(`Found ${response.segments?.length ?? 0} segments.`);
+            const distanceFactor = athlete.measurement_preference === 'feet' ? 0.000621371 : 0.001;
+            const distanceUnit = athlete.measurement_preference === 'feet' ? 'mi' : 'km';
+            const elevationFactor = athlete.measurement_preference === 'feet' ? 3.28084 : 1;
+            const elevationUnit = athlete.measurement_preference === 'feet' ? 'ft' : 'm';
 
-                if (!response.segments || response.segments.length === 0) {
-                    return { content: [{ type: "text", text: " MNo segments found in the specified area with the given filters." }] };
-                }
-
-                const distanceFactor = athlete.measurement_preference === 'feet' ? 0.000621371 : 0.001;
-                const distanceUnit = athlete.measurement_preference === 'feet' ? 'mi' : 'km';
-                const elevationFactor = athlete.measurement_preference === 'feet' ? 3.28084 : 1;
-                const elevationUnit = athlete.measurement_preference === 'feet' ? 'ft' : 'm';
-
-                // Format the segments
-                const segmentText = response.segments.map(segment => {
-                    const distance = (segment.distance * distanceFactor).toFixed(2);
-                    const elevDifference = (segment.elev_difference * elevationFactor).toFixed(0);
-                    return `
+            const segmentItems = response.segments.map(segment => {
+                const distance = (segment.distance * distanceFactor).toFixed(2);
+                const elevDifference = (segment.elev_difference * elevationFactor).toFixed(0);
+                const text = `
 🗺️ **${segment.name}** (ID: ${segment.id})
    - Climb: Cat ${segment.climb_category_desc} (${segment.climb_category})
    - Distance: ${distance} ${distanceUnit}
@@ -70,19 +69,32 @@ export function registerExploreSegmentsTool(server: McpServer) {
    - Elev Difference: ${elevDifference} ${elevationUnit}
    - Starred: ${segment.starred ? 'Yes' : 'No'}
                 `.trim();
-                }).join("\n---\n");
+                const item: { type: "text", text: string } = { type: "text" as const, text };
+                return item;
+            });
 
-                const responseText = `**Found Segments:**\n\n${segmentText}`;
+            const responseText = `**Found Segments:**\n\n${segmentItems.map(item => item.text).join("\n---\n")}`;
 
-                return { content: [{ type: "text", text: responseText }] };
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-                console.error("Error in explore-segments tool:", errorMessage);
-                return {
-                    content: [{ type: "text", text: `❌ API Error: ${errorMessage}` }],
-                    isError: true,
-                };
-            }
+            return { content: [{ type: "text" as const, text: responseText }] };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+            console.error("Error in explore-segments tool:", errorMessage);
+            return {
+                content: [{ type: "text" as const, text: `❌ API Error: ${errorMessage}` }],
+                isError: true,
+            };
         }
+    }
+};
+
+// Remove the old registration function
+/*
+export function registerExploreSegmentsTool(server: McpServer) {
+    server.tool(
+        exploreSegments.name,
+        exploreSegments.description,
+        exploreSegments.inputSchema.shape,
+        exploreSegments.execute
     );
-} 
+}
+*/ 

@@ -254,6 +254,35 @@ const DetailedSegmentEffortSchema = z.object({
 });
 export type StravaDetailedSegmentEffort = z.infer<typeof DetailedSegmentEffortSchema>;
 
+// --- Route Schema ---
+// Based on https://developers.strava.com/docs/reference/#api-models-Route
+const RouteSchema = z.object({
+    athlete: BaseAthleteSchema, // Reuse BaseAthleteSchema
+    description: z.string().nullable(),
+    distance: z.number(), // meters
+    elevation_gain: z.number().nullable(), // meters
+    id: z.number().int(),
+    id_str: z.string(),
+    map: MapSchema, // Reuse MapSchema
+    map_urls: z.object({ // Assuming structure based on context
+        retina_url: z.string().url().optional().nullable(),
+        url: z.string().url().optional().nullable(),
+    }).optional().nullable(),
+    name: z.string(),
+    private: z.boolean(),
+    resource_state: z.number().int(),
+    starred: z.boolean(),
+    sub_type: z.number().int(), // 1 for "road", 2 for "mtb", 3 for "cx", 4 for "trail", 5 for "mixed"
+    type: z.number().int(), // 1 for "ride", 2 for "run"
+    created_at: z.string().datetime(),
+    updated_at: z.string().datetime(),
+    estimated_moving_time: z.number().int().optional().nullable(), // seconds
+    segments: z.array(SummarySegmentSchema).optional().nullable(), // Array of segments within the route
+    timestamp: z.number().int().optional().nullable(), // Added based on common patterns
+});
+export type StravaRoute = z.infer<typeof RouteSchema>;
+const StravaRoutesResponseSchema = z.array(RouteSchema);
+
 /**
  * Fetches recent activities for the authenticated athlete from the Strava API.
  *
@@ -663,6 +692,124 @@ export async function listSegmentEfforts(
 
     } catch (error) {
         handleApiError(error, `listSegmentEfforts for segment ID ${segmentId}`);
+    }
+}
+
+/**
+ * Lists routes created by a specific athlete.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param athleteId - The ID of the athlete whose routes are being requested.
+ * @param page - Optional page number for pagination.
+ * @param perPage - Optional number of items per page.
+ * @returns A promise that resolves to an array of the athlete's routes.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
+ */
+export async function listAthleteRoutes(
+    accessToken: string,
+    athleteId: number,
+    page?: number,
+    perPage?: number
+): Promise<StravaRoute[]> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+    if (!athleteId) {
+        throw new Error("Athlete ID is required to list routes.");
+    }
+
+    const params: Record<string, any> = {};
+    if (page) params.page = page;
+    if (perPage) params.per_page = perPage;
+
+    try {
+        const response = await axios.get<unknown>(`https://www.strava.com/api/v3/athletes/${athleteId}/routes`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: params
+        });
+
+        const validationResult = StravaRoutesResponseSchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (listAthleteRoutes for athlete ${athleteId}):`, validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+        return validationResult.data;
+
+    } catch (error) {
+        handleApiError(error, `listAthleteRoutes for athlete ID ${athleteId}`);
+    }
+}
+
+/**
+ * Fetches detailed information for a specific route by its ID.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param routeId - The ID of the route to fetch.
+ * @returns A promise that resolves to the detailed route data.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
+ */
+export async function getRouteById(accessToken: string, routeId: number): Promise<StravaRoute> {
+    const url = `https://www.strava.com/api/v3/routes/${routeId}`;
+    try {
+        const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        // Validate the response against the Zod schema
+        const validatedRoute = RouteSchema.parse(response.data);
+        return validatedRoute;
+    } catch (error) {
+        handleApiError(error, `fetching route ${routeId}`);
+    }
+}
+
+/**
+ * Fetches the GPX data for a specific route.
+ * Note: This endpoint returns raw GPX data (XML string), not JSON.
+ * @param accessToken Strava API access token
+ * @param routeId The ID of the route to export
+ * @returns Promise resolving to the GPX data as a string
+ */
+export async function exportRouteGpx(accessToken: string, routeId: number): Promise<string> {
+    const url = `https://www.strava.com/api/v3/routes/${routeId}/export_gpx`;
+    try {
+        // Expecting text/xml response, Axios should handle it as string
+        const response = await axios.get<string>(url, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            // Ensure response is treated as text
+            responseType: 'text',
+        });
+        if (typeof response.data !== 'string') {
+             throw new Error('Invalid response format received from Strava API for GPX export.');
+        }
+        return response.data;
+    } catch (error) {
+        handleApiError(error, `exporting route ${routeId} as GPX`);
+    }
+}
+
+/**
+ * Fetches the TCX data for a specific route.
+ * Note: This endpoint returns raw TCX data (XML string), not JSON.
+ * @param accessToken Strava API access token
+ * @param routeId The ID of the route to export
+ * @returns Promise resolving to the TCX data as a string
+ */
+export async function exportRouteTcx(accessToken: string, routeId: number): Promise<string> {
+    const url = `https://www.strava.com/api/v3/routes/${routeId}/export_tcx`;
+    try {
+        // Expecting text/xml response, Axios should handle it as string
+        const response = await axios.get<string>(url, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+             // Ensure response is treated as text
+             responseType: 'text',
+        });
+        if (typeof response.data !== 'string') {
+            throw new Error('Invalid response format received from Strava API for TCX export.');
+       }
+        return response.data;
+    } catch (error) {
+        handleApiError(error, `exporting route ${routeId} as TCX`);
     }
 }
 

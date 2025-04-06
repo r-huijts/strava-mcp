@@ -1,17 +1,37 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+// import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import {
   getAuthenticatedAthlete,
-  getActivityById,
+  getActivityById as fetchActivityById, // Renamed import
   StravaDetailedActivity
 } from "../stravaClient.js";
-import { formatDuration } from "../server.js"; // Assuming formatDuration is kept in server.ts for now
+// import { formatDuration } from "../server.js"; // Removed, now local
 
 const GetActivityDetailsInputSchema = z.object({
   activityId: z.number().int().positive().describe("The unique identifier of the activity to fetch details for."),
 });
 
-// Helper Function (copied from server.ts, could be moved to a shared utils.ts)
+type GetActivityDetailsInput = z.infer<typeof GetActivityDetailsInputSchema>;
+
+// Helper Function (kept local to this tool)
+function formatDuration(seconds: number): string {
+    if (isNaN(seconds) || seconds < 0) {
+        return 'N/A';
+    }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    const parts: string[] = [];
+    if (hours > 0) {
+        parts.push(hours.toString().padStart(2, '0'));
+    }
+    parts.push(minutes.toString().padStart(2, '0'));
+    parts.push(secs.toString().padStart(2, '0'));
+
+    return parts.join(':');
+}
+
 function formatActivityDetails(activity: StravaDetailedActivity, units: 'feet' | 'meters'): string {
   const distanceFactor = units === 'feet' ? 0.000621371 : 0.001;
   const distanceUnit = units === 'feet' ? 'mi' : 'km';
@@ -51,42 +71,51 @@ function formatActivityDetails(activity: StravaDetailedActivity, units: 'feet' |
   return parts.filter(part => part !== '').join('\n');
 }
 
-export function registerGetActivityDetailsTool(server: McpServer) {
-  server.tool(
-    "get-activity-details",
-    "Fetches detailed information about a specific activity using its ID.",
-    GetActivityDetailsInputSchema.shape,
-    async (params, _extra) => {
-      const { activityId } = params;
+// Export the tool definition directly
+export const getActivityDetails = {
+    name: "get-activity-details",
+    description: "Fetches detailed information about a specific activity using its ID.",
+    inputSchema: GetActivityDetailsInputSchema,
+    execute: async ({ activityId }: GetActivityDetailsInput) => {
       const token = process.env.STRAVA_ACCESS_TOKEN;
 
       if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
         console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
         return {
-          content: [{ type: "text", text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
+          content: [{ type: "text" as const, text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
           isError: true,
         };
       }
 
       try {
         console.error(`Fetching details for activity ID: ${activityId}...`);
-        // Need athlete's measurement preference for formatting, fetch it first
         const athlete = await getAuthenticatedAthlete(token);
         console.error(`Fetching activity details for ID: ${activityId}...`);
-        const activityDetails = await getActivityById(token, activityId);
+        const activityDetails = await fetchActivityById(token, activityId);
         console.error(`Successfully fetched details for activity: ${activityDetails.name}`);
 
         const detailsText = formatActivityDetails(activityDetails, athlete.measurement_preference);
 
-        return { content: [{ type: "text", text: detailsText }] };
+        return { content: [{ type: "text" as const, text: detailsText }] };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
         console.error(`Error in get-activity-details tool for ID ${activityId}:`, errorMessage);
         return {
-          content: [{ type: "text", text: `❌ API Error: ${errorMessage}` }],
+          content: [{ type: "text" as const, text: `❌ API Error: ${errorMessage}` }],
           isError: true,
         };
       }
     }
+};
+
+// Removed old registration function
+/*
+export function registerGetActivityDetailsTool(server: McpServer) {
+  server.tool(
+    getActivityDetails.name,
+    getActivityDetails.description,
+    getActivityDetails.inputSchema.shape,
+    getActivityDetails.execute
   );
-} 
+}
+*/ 
