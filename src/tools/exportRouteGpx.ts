@@ -28,8 +28,8 @@ export const exportRouteGpx = {
             };
         }
 
-        const exportPath = process.env.ROUTE_EXPORT_PATH;
-        if (!exportPath) {
+        const exportDir = process.env.ROUTE_EXPORT_PATH;
+        if (!exportDir) {
             // Strict return structure
             return {
                 content: [{ type: "text" as const, text: "❌ Error: Missing ROUTE_EXPORT_PATH in .env file. Please configure the directory for saving exports." }],
@@ -37,43 +37,27 @@ export const exportRouteGpx = {
             };
         }
 
-        // Validate the export path
         try {
-            const stats = fs.statSync(exportPath);
-            if (!stats.isDirectory()) {
-                // Strict return structure
-                return {
-                    content: [{ type: "text" as const, text: `❌ Error: ROUTE_EXPORT_PATH (${exportPath}) is not a valid directory.` }],
-                    isError: true
-                };
+            // Ensure the directory exists, create if not
+            if (!fs.existsSync(exportDir)) {
+                console.error(`Export directory ${exportDir} not found, creating it...`);
+                fs.mkdirSync(exportDir, { recursive: true });
+            } else {
+                // Check if it's a directory and writable (existing logic)
+                const stats = fs.statSync(exportDir);
+                if (!stats.isDirectory()) {
+                    // Strict return structure
+                    return {
+                        content: [{ type: "text" as const, text: `❌ Error: ROUTE_EXPORT_PATH (${exportDir}) is not a valid directory.` }],
+                        isError: true
+                    };
+                }
+                fs.accessSync(exportDir, fs.constants.W_OK);
             }
-            fs.accessSync(exportPath, fs.constants.W_OK);
-        } catch (err: any) {
-            if (err.code === 'ENOENT') {
-                // Strict return structure
-                return {
-                    content: [{ type: "text" as const, text: `❌ Error: ROUTE_EXPORT_PATH directory (${exportPath}) does not exist.` }],
-                    isError: true
-                };
-            }
-             if (err.code === 'EACCES') {
-                 // Strict return structure
-                return {
-                    content: [{ type: "text" as const, text: `❌ Error: No write permission for ROUTE_EXPORT_PATH directory (${exportPath}).` }],
-                    isError: true
-                };
-            }
-            // Strict return structure
-            return {
-                content: [{ type: "text" as const, text: `❌ Error accessing ROUTE_EXPORT_PATH (${exportPath}): ${err.message}` }],
-                isError: true
-            };
-        }
 
-        try {
             const gpxData = await fetchGpxData(token, routeId);
             const filename = `route-${routeId}.gpx`;
-            const fullPath = path.join(exportPath, filename);
+            const fullPath = path.join(exportDir, filename);
             fs.writeFileSync(fullPath, gpxData);
 
             // Strict return structure
@@ -84,8 +68,12 @@ export const exportRouteGpx = {
         } catch (err: any) {
             console.error(`Error in export-route-gpx tool for route ${routeId}:`, err);
             // Strict return structure
+            let userMessage = `❌ Error exporting route ${routeId} as GPX: ${err.message}`;
+            if (err.code === 'EACCES') {
+                userMessage = `❌ Error: No write permission for ROUTE_EXPORT_PATH directory (${exportDir}).`;
+            }
             return {
-                content: [{ type: "text" as const, text: `❌ Error exporting route ${routeId} as GPX: ${err.message}` }],
+                content: [{ type: "text" as const, text: userMessage }],
                 isError: true
             };
         }
