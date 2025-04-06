@@ -19,4 +19,9 @@ yarn-error.log*
 *.ntvs*
 *.njsproj
 *.sln
-*.sw? 
+*.sw?
+
+# Cursor IDE files
+.cursor/
+*.mdc
+cursor_rules.json 
