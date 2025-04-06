@@ -1,5 +1,31 @@
 import axios from "axios";
 import { z } from "zod";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// --- Axios Instance & Interceptor --- 
+// Create an Axios instance to apply interceptors globally for this client
+const stravaApi = axios.create({
+    baseURL: 'https://www.strava.com/api/v3'
+});
+
+// Add a request interceptor (can be used for logging or modifying requests)
+stravaApi.interceptors.request.use(config => {
+    // REMOVE DEBUG LOGS - Interfere with MCP Stdio transport
+    // let authHeaderLog = 'Not Set';
+    // const authHeaderValue = config.headers?.Authorization;
+    // if (typeof authHeaderValue === 'string') {
+    //     authHeaderLog = `${authHeaderValue.substring(0, 12)}...[REDACTED]`;
+    // }
+    // console.error(`[DEBUG stravaClient] Sending Request: ${config.method?.toUpperCase()} ${config.url}`);
+    // console.error(`[DEBUG stravaClient] Authorization Header: ${authHeaderLog}` );
+    return config;
+}, error => {
+    console.error('[DEBUG stravaClient] Request Error Interceptor:', error);
+    return Promise.reject(error);
+});
+// ----------------------------------
 
 // Define the expected structure of a Strava activity (add more fields as needed)
 const StravaActivitySchema = z.object({
@@ -34,7 +60,7 @@ const DetailedAthleteSchema = BaseAthleteSchema.extend({
     profile_medium: z.string().url(),
     profile: z.string().url(),
     weight: z.number().nullable(),
-    measurement_preference: z.enum(["feet", "meters"]),
+    measurement_preference: z.enum(["feet", "meters"]).optional().nullable(),
     // Add other fields as needed (e.g., follower_count, friend_count, ftp, clubs, bikes, shoes)
 });
 
@@ -283,6 +309,142 @@ const RouteSchema = z.object({
 export type StravaRoute = z.infer<typeof RouteSchema>;
 const StravaRoutesResponseSchema = z.array(RouteSchema);
 
+// --- Token Refresh Functionality ---
+// Calculate path to .env file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+const envPath = path.join(projectRoot, '.env');
+
+/**
+ * Updates the .env file with new access and refresh tokens
+ * @param accessToken - The new access token
+ * @param refreshToken - The new refresh token
+ */
+async function updateTokensInEnvFile(accessToken: string, refreshToken: string): Promise<void> {
+    try {
+        let envContent = await fs.readFile(envPath, 'utf-8');
+        const lines = envContent.split('\n');
+        const newLines: string[] = [];
+        let accessTokenUpdated = false;
+        let refreshTokenUpdated = false;
+
+        for (const line of lines) {
+            if (line.startsWith('STRAVA_ACCESS_TOKEN=')) {
+                newLines.push(`STRAVA_ACCESS_TOKEN=${accessToken}`);
+                accessTokenUpdated = true;
+            } else if (line.startsWith('STRAVA_REFRESH_TOKEN=')) {
+                newLines.push(`STRAVA_REFRESH_TOKEN=${refreshToken}`);
+                refreshTokenUpdated = true;
+            } else if (line.trim() !== '') {
+                newLines.push(line);
+            }
+        }
+
+        if (!accessTokenUpdated) {
+            newLines.push(`STRAVA_ACCESS_TOKEN=${accessToken}`);
+        }
+        if (!refreshTokenUpdated) {
+            newLines.push(`STRAVA_REFRESH_TOKEN=${refreshToken}`);
+        }
+
+        await fs.writeFile(envPath, newLines.join('\n').trim() + '\n');
+        console.error('✅ Tokens successfully refreshed and updated in .env file.');
+    } catch (error) {
+        console.error('Failed to update tokens in .env file:', error);
+        // Continue execution even if file update fails
+    }
+}
+
+/**
+ * Refreshes the Strava API access token using the refresh token
+ * @returns The new access token
+ */
+async function refreshAccessToken(): Promise<string> {
+    const refreshToken = process.env.STRAVA_REFRESH_TOKEN;
+    const clientId = process.env.STRAVA_CLIENT_ID;
+    const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+    
+    if (!refreshToken || !clientId || !clientSecret) {
+        throw new Error("Missing refresh credentials in .env (STRAVA_REFRESH_TOKEN, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET)");
+    }
+    
+    try {
+        console.error('🔄 Refreshing Strava access token...');
+        const response = await axios.post('https://www.strava.com/oauth/token', {
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token'
+        });
+        
+        // Update tokens in environment variables for the current process
+        const newAccessToken = response.data.access_token;
+        const newRefreshToken = response.data.refresh_token;
+        
+        if (!newAccessToken || !newRefreshToken) {
+            throw new Error('Refresh response missing required tokens');
+        }
+        
+        process.env.STRAVA_ACCESS_TOKEN = newAccessToken;
+        process.env.STRAVA_REFRESH_TOKEN = newRefreshToken;
+        
+        // Also update .env file for persistence
+        await updateTokensInEnvFile(newAccessToken, newRefreshToken);
+        
+        console.error(`✅ Token refreshed. New token expires: ${new Date(response.data.expires_at * 1000).toLocaleString()}`);
+        return newAccessToken;
+    } catch (error) {
+        console.error('Failed to refresh access token:', error);
+        throw new Error(`Failed to refresh Strava access token: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+/**
+ * Helper function to handle API errors with token refresh capability
+ * @param error - The caught error
+ * @param context - The context in which the error occurred
+ * @param retryFn - Optional function to retry after token refresh
+ * @returns Never returns normally, always throws an error or returns via retryFn
+ */
+export async function handleApiError<T>(error: unknown, context: string, retryFn?: () => Promise<T>): Promise<T> {
+    // Check if it's an authentication error (401) that might be fixed by refreshing the token
+    if (axios.isAxiosError(error) && error.response?.status === 401 && retryFn) {
+        try {
+            console.error(`🔑 Authentication error in ${context}. Attempting to refresh token...`);
+            await refreshAccessToken();
+            
+            // Return the result of the retry function if it succeeds
+            console.error(`🔄 Retrying ${context} after token refresh...`);
+            return await retryFn();
+        } catch (refreshError) {
+            console.error(`❌ Token refresh failed: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`);
+            // Fall through to normal error handling if refresh fails
+        }
+    }
+    
+    // Standard error handling (existing code)
+    if (axios.isAxiosError(error)) {
+        const status = error.response?.status || 'Unknown';
+        const responseData = error.response?.data;
+        const message = (typeof responseData === 'object' && responseData !== null && 'message' in responseData && typeof responseData.message === 'string')
+            ? responseData.message
+            : error.message;
+        console.error(`Strava API request failed in ${context} with status ${status}: ${message}`);
+        // Include response data in error log if helpful (be careful with sensitive data)
+        if (responseData) {
+             console.error(`Response data (${context}):`, JSON.stringify(responseData, null, 2));
+        }
+        throw new Error(`Strava API Error in ${context} (${status}): ${message}`);
+    } else if (error instanceof Error) {
+        console.error(`An unexpected error occurred in ${context}:`, error);
+        throw new Error(`An unexpected error occurred in ${context}: ${error.message}`);
+    } else {
+        console.error(`An unknown error object was caught in ${context}:`, error);
+        throw new Error(`An unknown error occurred in ${context}: ${String(error)}`);
+    }
+}
+
 /**
  * Fetches recent activities for the authenticated athlete from the Strava API.
  *
@@ -291,18 +453,17 @@ const StravaRoutesResponseSchema = z.array(RouteSchema);
  * @returns A promise that resolves to an array of Strava activities.
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
-export async function getRecentActivities(accessToken: string, perPage = 30) {
+export async function getRecentActivities(accessToken: string, perPage = 30): Promise<any[]> {
     if (!accessToken) {
         throw new Error("Strava access token is required.");
     }
 
     try {
-        const response = await axios.get("https://www.strava.com/api/v3/athlete/activities", {
+        const response = await stravaApi.get<unknown>("athlete/activities", {
             headers: { Authorization: `Bearer ${accessToken}` },
             params: { per_page: perPage }
         });
 
-        // Validate the response data against the Zod schema
         const validationResult = StravaActivitiesResponseSchema.safeParse(response.data);
 
         if (!validationResult.success) {
@@ -312,7 +473,12 @@ export async function getRecentActivities(accessToken: string, perPage = 30) {
 
         return validationResult.data;
     } catch (error) {
-        handleApiError(error, 'getRecentActivities');
+        // Pass a retry function to handleApiError
+        return await handleApiError<any[]>(error, 'getRecentActivities', async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getRecentActivities(newToken, perPage);
+        });
     }
 }
 
@@ -329,7 +495,7 @@ export async function getAuthenticatedAthlete(accessToken: string): Promise<Stra
     }
 
     try {
-        const response = await axios.get<unknown>("https://www.strava.com/api/v3/athlete", {
+        const response = await stravaApi.get<unknown>("athlete", {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
@@ -337,6 +503,8 @@ export async function getAuthenticatedAthlete(accessToken: string): Promise<Stra
         const validationResult = DetailedAthleteSchema.safeParse(response.data);
 
         if (!validationResult.success) {
+             // Log the raw response data on validation failure for debugging
+             console.error("Strava API raw response data (getAuthenticatedAthlete):", JSON.stringify(response.data, null, 2));
              console.error("Strava API response validation failed (getAuthenticatedAthlete):", validationResult.error);
             throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
         }
@@ -344,7 +512,11 @@ export async function getAuthenticatedAthlete(accessToken: string): Promise<Stra
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, 'getAuthenticatedAthlete');
+         return await handleApiError<StravaAthlete>(error, 'getAuthenticatedAthlete', async () => {
+             // Use new token from environment after refresh
+             const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+             return getAuthenticatedAthlete(newToken);
+         });
     }
 }
 
@@ -365,7 +537,7 @@ export async function getAthleteStats(accessToken: string, athleteId: number): P
     }
 
     try {
-        const response = await axios.get<unknown>(`https://www.strava.com/api/v3/athletes/${athleteId}/stats`, {
+        const response = await stravaApi.get<unknown>(`athletes/${athleteId}/stats`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
@@ -378,7 +550,11 @@ export async function getAthleteStats(accessToken: string, athleteId: number): P
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, `getAthleteStats for ID ${athleteId}`);
+         return await handleApiError<StravaStats>(error, `getAthleteStats for ID ${athleteId}`, async () => {
+             // Use new token from environment after refresh
+             const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+             return getAthleteStats(newToken, athleteId);
+         });
     }
 }
 
@@ -399,7 +575,7 @@ export async function getActivityById(accessToken: string, activityId: number): 
     }
 
     try {
-        const response = await axios.get<unknown>(`https://www.strava.com/api/v3/activities/${activityId}`, {
+        const response = await stravaApi.get<unknown>(`activities/${activityId}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
@@ -412,7 +588,11 @@ export async function getActivityById(accessToken: string, activityId: number): 
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, `getActivityById for ID ${activityId}`);
+         return await handleApiError<StravaDetailedActivity>(error, `getActivityById for ID ${activityId}`, async () => {
+             // Use new token from environment after refresh
+             const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+             return getActivityById(newToken, activityId);
+         });
     }
 }
 
@@ -429,7 +609,7 @@ export async function listAthleteClubs(accessToken: string): Promise<StravaClub[
     }
 
     try {
-        const response = await axios.get<unknown>("https://www.strava.com/api/v3/athlete/clubs", {
+        const response = await stravaApi.get<unknown>("athlete/clubs", {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
@@ -442,7 +622,11 @@ export async function listAthleteClubs(accessToken: string): Promise<StravaClub[
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, 'listAthleteClubs');
+         return await handleApiError<StravaClub[]>(error, 'listAthleteClubs', async () => {
+             // Use new token from environment after refresh
+             const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+             return listAthleteClubs(newToken);
+         });
     }
 }
 
@@ -461,20 +645,24 @@ export async function listStarredSegments(accessToken: string): Promise<StravaSe
     try {
         // Strava API uses page/per_page but often defaults reasonably for lists like this.
         // Add pagination parameters if needed later.
-        const response = await axios.get<unknown>("https://www.strava.com/api/v3/segments/starred", {
+        const response = await stravaApi.get<unknown>("segments/starred", {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
         const validationResult = StravaSegmentsResponseSchema.safeParse(response.data);
 
         if (!validationResult.success) {
-             console.error("Strava API validation failed (listStarredSegments):", validationResult.error);
+            console.error("Strava API validation failed (listStarredSegments):", validationResult.error);
             throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
         }
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, 'listStarredSegments');
+        return await handleApiError<StravaSegment[]>(error, 'listStarredSegments', async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return listStarredSegments(newToken);
+        });
     }
 }
 
@@ -490,25 +678,29 @@ export async function getSegmentById(accessToken: string, segmentId: number): Pr
     if (!accessToken) {
         throw new Error("Strava access token is required.");
     }
-     if (!segmentId) {
-        throw new Error("Segment ID is required to fetch details.");
+    if (!segmentId) {
+        throw new Error("Segment ID is required.");
     }
 
     try {
-        const response = await axios.get<unknown>(`https://www.strava.com/api/v3/segments/${segmentId}`, {
+        const response = await stravaApi.get<unknown>(`segments/${segmentId}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
         const validationResult = DetailedSegmentSchema.safeParse(response.data);
 
         if (!validationResult.success) {
-             console.error(`Strava API validation failed (getSegmentById: ${segmentId}):`, validationResult.error);
+            console.error(`Strava API validation failed (getSegmentById: ${segmentId}):`, validationResult.error);
             throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
         }
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, `getSegmentById for ID ${segmentId}`);
+        return await handleApiError<StravaDetailedSegment>(error, `getSegmentById for ID ${segmentId}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getSegmentById(newToken, segmentId);
+        });
     }
 }
 
@@ -545,7 +737,7 @@ export async function exploreSegments(
     if (maxCat !== undefined) params.max_cat = maxCat;
 
     try {
-        const response = await axios.get<unknown>("https://www.strava.com/api/v3/segments/explore", {
+        const response = await stravaApi.get<unknown>("segments/explore", {
             headers: { Authorization: `Bearer ${accessToken}` },
             params: params
         });
@@ -559,7 +751,11 @@ export async function exploreSegments(
         return validationResult.data;
 
     } catch (error) {
-        handleApiError(error, `exploreSegments with bounds ${bounds}`);
+        return await handleApiError<StravaExplorerResponse>(error, `exploreSegments with bounds ${bounds}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return exploreSegments(newToken, bounds, activityType);
+        });
     }
 }
 
@@ -584,8 +780,8 @@ export async function starSegment(accessToken: string, segmentId: number, starre
     }
 
     try {
-        const response = await axios.put<unknown>(
-            `https://www.strava.com/api/v3/segments/${segmentId}/starred`,
+        const response = await stravaApi.put<unknown>(
+            `segments/${segmentId}/starred`,
             { starred: starred }, // Data payload for the PUT request
             {
                 headers: {
@@ -605,7 +801,11 @@ export async function starSegment(accessToken: string, segmentId: number, starre
         return validationResult.data;
 
     } catch (error) {
-        handleApiError(error, `starSegment for ID ${segmentId} with starred=${starred}`);
+        return await handleApiError<StravaDetailedSegment>(error, `starSegment for ID ${segmentId} with starred=${starred}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return starSegment(newToken, segmentId, starred);
+        });
     }
 }
 
@@ -617,7 +817,7 @@ export async function starSegment(accessToken: string, segmentId: number, starre
  * @returns A promise that resolves to the detailed segment effort data.
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
-export async function getSegmentEffortById(accessToken: string, effortId: number): Promise<StravaDetailedSegmentEffort> {
+export async function getSegmentEffort(accessToken: string, effortId: number): Promise<StravaDetailedSegmentEffort> {
     if (!accessToken) {
         throw new Error("Strava access token is required.");
     }
@@ -626,20 +826,24 @@ export async function getSegmentEffortById(accessToken: string, effortId: number
     }
 
     try {
-        const response = await axios.get<unknown>(`https://www.strava.com/api/v3/segment_efforts/${effortId}`, {
+        const response = await stravaApi.get<unknown>(`segment_efforts/${effortId}`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
 
         const validationResult = DetailedSegmentEffortSchema.safeParse(response.data);
 
         if (!validationResult.success) {
-             console.error(`Strava API validation failed (getSegmentEffortById: ${effortId}):`, validationResult.error);
+             console.error(`Strava API validation failed (getSegmentEffort: ${effortId}):`, validationResult.error);
             throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
         }
         return validationResult.data;
 
     } catch (error) {
-         handleApiError(error, `getSegmentEffortById for ID ${effortId}`);
+        return await handleApiError<StravaDetailedSegmentEffort>(error, `getSegmentEffort for ID ${effortId}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getSegmentEffort(newToken, effortId);
+        });
     }
 }
 
@@ -657,9 +861,7 @@ export async function getSegmentEffortById(accessToken: string, effortId: number
 export async function listSegmentEfforts(
     accessToken: string,
     segmentId: number,
-    startDateLocal?: string,
-    endDateLocal?: string,
-    perPage?: number
+    params: SegmentEffortsParams = {}
 ): Promise<StravaDetailedSegmentEffort[]> {
     if (!accessToken) {
         throw new Error("Strava access token is required.");
@@ -668,17 +870,19 @@ export async function listSegmentEfforts(
         throw new Error("Segment ID is required to list efforts.");
     }
 
-    const params: Record<string, any> = {
+    const { startDateLocal, endDateLocal, perPage } = params;
+
+    const queryParams: Record<string, any> = {
         segment_id: segmentId,
     };
-    if (startDateLocal) params.start_date_local = startDateLocal;
-    if (endDateLocal) params.end_date_local = endDateLocal;
-    if (perPage) params.per_page = perPage;
+    if (startDateLocal) queryParams.start_date_local = startDateLocal;
+    if (endDateLocal) queryParams.end_date_local = endDateLocal;
+    if (perPage) queryParams.per_page = perPage;
 
     try {
-        const response = await axios.get<unknown>("https://www.strava.com/api/v3/segment_efforts", {
+        const response = await stravaApi.get<unknown>("segment_efforts", {
             headers: { Authorization: `Bearer ${accessToken}` },
-            params: params
+            params: queryParams
         });
 
         // Response is an array of DetailedSegmentEffort
@@ -691,8 +895,19 @@ export async function listSegmentEfforts(
         return validationResult.data;
 
     } catch (error) {
-        handleApiError(error, `listSegmentEfforts for segment ID ${segmentId}`);
+        return await handleApiError<StravaDetailedSegmentEffort[]>(error, `listSegmentEfforts for segment ID ${segmentId}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return listSegmentEfforts(newToken, segmentId, params);
+        });
     }
+}
+
+// Add the missing interface for segment efforts parameters
+export interface SegmentEffortsParams {
+    startDateLocal?: string;
+    endDateLocal?: string;
+    perPage?: number;
 }
 
 /**
@@ -705,39 +920,34 @@ export async function listSegmentEfforts(
  * @returns A promise that resolves to an array of the athlete's routes.
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
-export async function listAthleteRoutes(
-    accessToken: string,
-    athleteId: number,
-    page?: number,
-    perPage?: number
-): Promise<StravaRoute[]> {
+export async function listAthleteRoutes(accessToken: string, page = 1, perPage = 30): Promise<StravaRoute[]> {
     if (!accessToken) {
         throw new Error("Strava access token is required.");
     }
-    if (!athleteId) {
-        throw new Error("Athlete ID is required to list routes.");
-    }
-
-    const params: Record<string, any> = {};
-    if (page) params.page = page;
-    if (perPage) params.per_page = perPage;
 
     try {
-        const response = await axios.get<unknown>(`https://www.strava.com/api/v3/athletes/${athleteId}/routes`, {
+        const response = await stravaApi.get<unknown>("athlete/routes", {
             headers: { Authorization: `Bearer ${accessToken}` },
-            params: params
+            params: { 
+                page: page,
+                per_page: perPage
+            }
         });
 
         const validationResult = StravaRoutesResponseSchema.safeParse(response.data);
 
         if (!validationResult.success) {
-            console.error(`Strava API validation failed (listAthleteRoutes for athlete ${athleteId}):`, validationResult.error);
+            console.error("Strava API validation failed (listAthleteRoutes):", validationResult.error);
             throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
         }
         return validationResult.data;
 
     } catch (error) {
-        handleApiError(error, `listAthleteRoutes for athlete ID ${athleteId}`);
+        return await handleApiError<StravaRoute[]>(error, 'listAthleteRoutes', async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return listAthleteRoutes(newToken, page, perPage);
+        });
     }
 }
 
@@ -750,16 +960,20 @@ export async function listAthleteRoutes(
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
 export async function getRouteById(accessToken: string, routeId: number): Promise<StravaRoute> {
-    const url = `https://www.strava.com/api/v3/routes/${routeId}`;
+    const url = `routes/${routeId}`;
     try {
-        const response = await axios.get(url, {
+        const response = await stravaApi.get(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
         // Validate the response against the Zod schema
         const validatedRoute = RouteSchema.parse(response.data);
         return validatedRoute;
     } catch (error) {
-        handleApiError(error, `fetching route ${routeId}`);
+        return await handleApiError<StravaRoute>(error, `fetching route ${routeId}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getRouteById(newToken, routeId);
+        });
     }
 }
 
@@ -771,10 +985,10 @@ export async function getRouteById(accessToken: string, routeId: number): Promis
  * @returns Promise resolving to the GPX data as a string
  */
 export async function exportRouteGpx(accessToken: string, routeId: number): Promise<string> {
-    const url = `https://www.strava.com/api/v3/routes/${routeId}/export_gpx`;
+    const url = `routes/${routeId}/export_gpx`;
     try {
         // Expecting text/xml response, Axios should handle it as string
-        const response = await axios.get<string>(url, {
+        const response = await stravaApi.get<string>(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
             // Ensure response is treated as text
             responseType: 'text',
@@ -784,7 +998,11 @@ export async function exportRouteGpx(accessToken: string, routeId: number): Prom
         }
         return response.data;
     } catch (error) {
-        handleApiError(error, `exporting route ${routeId} as GPX`);
+        return await handleApiError<string>(error, `exporting route ${routeId} as GPX`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return exportRouteGpx(newToken, routeId);
+        });
     }
 }
 
@@ -796,10 +1014,10 @@ export async function exportRouteGpx(accessToken: string, routeId: number): Prom
  * @returns Promise resolving to the TCX data as a string
  */
 export async function exportRouteTcx(accessToken: string, routeId: number): Promise<string> {
-    const url = `https://www.strava.com/api/v3/routes/${routeId}/export_tcx`;
+    const url = `routes/${routeId}/export_tcx`;
     try {
         // Expecting text/xml response, Axios should handle it as string
-        const response = await axios.get<string>(url, {
+        const response = await stravaApi.get<string>(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
              // Ensure response is treated as text
              responseType: 'text',
@@ -809,36 +1027,10 @@ export async function exportRouteTcx(accessToken: string, routeId: number): Prom
        }
         return response.data;
     } catch (error) {
-        handleApiError(error, `exporting route ${routeId} as TCX`);
-    }
-}
-
-// --- Error Handling Helper ---
-
-/**
- * Centralized error handler for Strava API calls.
- * Logs the error details and throws a standardized error.
- * @param error - The error object caught (potentially unknown).
- * @param context - String identifying the function where the error occurred.
- */
-function handleApiError(error: unknown, context: string): never {
-    if (axios.isAxiosError(error)) {
-        const status = error.response?.status || 'Unknown';
-        const responseData = error.response?.data;
-        const message = (typeof responseData === 'object' && responseData !== null && 'message' in responseData && typeof responseData.message === 'string')
-            ? responseData.message
-            : error.message;
-        console.error(`Strava API request failed in ${context} with status ${status}: ${message}`);
-        // Include response data in error log if helpful (be careful with sensitive data)
-        if (responseData) {
-             console.error(`Response data (${context}):`, JSON.stringify(responseData, null, 2));
-        }
-        throw new Error(`Strava API Error in ${context} (${status}): ${message}`);
-    } else if (error instanceof Error) {
-        console.error(`An unexpected error occurred in ${context}:`, error);
-        throw new Error(`An unexpected error occurred in ${context}: ${error.message}`);
-    } else {
-        console.error(`An unknown error object was caught in ${context}:`, error);
-        throw new Error(`An unknown error occurred in ${context}: ${String(error)}`);
+        return await handleApiError<string>(error, `exporting route ${routeId} as TCX`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return exportRouteTcx(newToken, routeId);
+        });
     }
 } 
