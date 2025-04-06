@@ -3,7 +3,7 @@ import { getAuthenticatedAthlete } from "../stravaClient.js";
 // Export the tool definition directly
 export const getAthleteProfile = {
     name: "get-athlete-profile",
-    description: "Fetches the profile information for the authenticated athlete.",
+    description: "Fetches the profile information for the authenticated athlete, including their unique numeric ID needed for other tools like get-athlete-stats.",
     // No input schema needed for this tool
     inputSchema: undefined,
     execute: async () => { // No input parameters needed

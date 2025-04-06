@@ -10,7 +10,7 @@ import {
 
 // Input schema: Now requires athleteId
 const GetAthleteStatsInputSchema = z.object({
-    athleteId: z.number().int().positive().describe("The unique identifier of the athlete to fetch stats for.")
+    athleteId: z.number().int().positive().describe("The unique identifier of the athlete to fetch stats for. Obtain this ID first by calling the get-athlete-profile tool.")
 });
 
 // Define type alias for input
@@ -113,7 +113,7 @@ function formatStats(stats: StravaStats): string {
 // Tool definition
 export const getAthleteStatsTool = {
     name: "get-athlete-stats",
-    description: "Fetches the activity statistics (recent, YTD, all-time) for a specific athlete using their ID.",
+    description: "Fetches the activity statistics (recent, YTD, all-time) for a specific athlete using their ID. Requires the athleteId obtained from the get-athlete-profile tool.",
     inputSchema: GetAthleteStatsInputSchema,
     execute: async ({ athleteId }: GetAthleteStatsInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
