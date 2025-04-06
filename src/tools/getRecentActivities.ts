@@ -17,6 +17,10 @@ export const getRecentActivities = {
     execute: async ({ perPage }: GetRecentActivitiesInput) => {
       const token = process.env.STRAVA_ACCESS_TOKEN;
 
+      // --- DEBUGGING: Print the token being used --- 
+      console.error(`[DEBUG] Using STRAVA_ACCESS_TOKEN: ${token?.substring(0, 5)}...${token?.slice(-5)}`);
+      // ---------------------------------------------
+
       if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
         console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
         // Use literal type for content item

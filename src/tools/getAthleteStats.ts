@@ -1,12 +1,21 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
+import { z } from "zod";
 import {
-  getAuthenticatedAthlete,
-  getAthleteStats as fetchStats, // Renamed import
-  StravaStats
+    // getAuthenticatedAthlete as fetchAuthenticatedAthlete, // Removed
+    getAthleteStats as fetchAthleteStats,
+    handleApiError,
+    StravaStats // Type needed for formatter
 } from "../stravaClient.js";
 // formatDuration is now local or in utils, not imported from server.ts
 
-// Helper Function for formatting stats (kept local to this tool)
+// Input schema (no arguments needed)
+const GetAthleteStatsInputSchema = z.object({});
+
+// Remove type alias as input parameter is removed
+// type GetAthleteStatsInput = z.infer<typeof GetAthleteStatsInputSchema>;
+
+// Remove unused formatDuration function
+/*
 function formatDuration(seconds: number): string {
     if (isNaN(seconds) || seconds < 0) {
         return 'N/A';
@@ -24,81 +33,126 @@ function formatDuration(seconds: number): string {
 
     return parts.join(':');
 }
+*/
 
-function formatStats(stats: StravaStats, units: 'feet' | 'meters'): string {
-  const distanceFactor = units === 'feet' ? 0.000621371 : 0.001;
-  const distanceUnit = units === 'feet' ? 'mi' : 'km';
-  const elevationFactor = units === 'feet' ? 3.28084 : 1;
-  const elevationUnit = units === 'feet' ? 'ft' : 'm';
+// Helper function to format numbers as strings with labels (metric)
+function formatStat(value: number | null | undefined, unit: 'km' | 'm' | 'hrs'): string {
+    if (value === null || value === undefined) return 'N/A';
 
-  const formatTotals = (totals: any, type: string, period: string) => {
-    if (!totals || totals.count === 0) return `  - ${period} ${type}: No data`;
-    const distance = (totals.distance * distanceFactor).toFixed(1);
-    const movingTime = formatDuration(totals.moving_time); // Use local formatDuration
-    const elevation = (totals.elevation_gain * elevationFactor).toFixed(0);
-    return `  - ${period} ${type}: ${totals.count} activities, ${distance} ${distanceUnit}, ${movingTime}, ${elevation} ${elevationUnit} elev gain`;
-  };
-
-  const statsParts = [
-    `📊 **Activity Stats**`,
-    "*Recent Totals (Last 4 Weeks):*",
-    formatTotals(stats.recent_ride_totals, "Rides", "Recent"),
-    formatTotals(stats.recent_run_totals, "Runs", "Recent"),
-    formatTotals(stats.recent_swim_totals, "Swims", "Recent"),
-    "*Year-to-Date Totals:*",
-    formatTotals(stats.ytd_ride_totals, "Rides", "YTD"),
-    formatTotals(stats.ytd_run_totals, "Runs", "YTD"),
-    formatTotals(stats.ytd_swim_totals, "Swims", "YTD"),
-    "*All-Time Totals:*",
-    formatTotals(stats.all_ride_totals, "Rides", "All-Time"),
-    formatTotals(stats.all_run_totals, "Runs", "All-Time"),
-    formatTotals(stats.all_swim_totals, "Swims", "All-Time"),
-    "*Records:*",
-    `  - Longest Ride: ${stats.biggest_ride_distance ? (stats.biggest_ride_distance * distanceFactor).toFixed(1) + ` ${distanceUnit}` : 'N/A'}`,
-    `  - Biggest Climb (Elevation): ${stats.biggest_climb_elevation_gain ? (stats.biggest_climb_elevation_gain * elevationFactor).toFixed(0) + ` ${elevationUnit}` : 'N/A'}`
-  ];
-
-  return statsParts.join("\n");
+    let formattedValue: string;
+    if (unit === 'km') {
+        formattedValue = (value / 1000).toFixed(2);
+    } else if (unit === 'm') {
+        formattedValue = Math.round(value).toString();
+    } else if (unit === 'hrs') {
+        formattedValue = (value / 3600).toFixed(1);
+    } else {
+        formattedValue = value.toString();
+    }
+    return `${formattedValue} ${unit}`;
 }
 
-// Export the tool definition directly
-export const getAthleteStats = {
+// Format athlete stats (metric only)
+function formatStats(stats: StravaStats): string {
+    const format = (label: string, total: number | null | undefined, unit: 'km' | 'm' | 'hrs', count?: number | null, time?: number | null) => {
+        let line = `   - ${label}: ${formatStat(total, unit)}`;
+        if (count !== undefined && count !== null) line += ` (${count} activities)`;
+        if (time !== undefined && time !== null) line += ` / ${formatStat(time, 'hrs')} hours`;
+        return line;
+    };
+
+    let response = "📊 **Your Strava Stats:**\n";
+
+    if (stats.biggest_ride_distance !== undefined) {
+        response += "**Rides:**\n";
+        response += format("Biggest Ride", stats.biggest_ride_distance, 'km') + '\n';
+    }
+    if (stats.recent_ride_totals) {
+        response += "*Recent Rides (last 4 weeks):*\n";
+        response += format("Distance", stats.recent_ride_totals.distance, 'km', stats.recent_ride_totals.count, stats.recent_ride_totals.moving_time) + '\n';
+        response += format("Elevation Gain", stats.recent_ride_totals.elevation_gain, 'm') + '\n';
+    }
+    if (stats.ytd_ride_totals) {
+        response += "*Year-to-Date Rides:*\n";
+        response += format("Distance", stats.ytd_ride_totals.distance, 'km', stats.ytd_ride_totals.count, stats.ytd_ride_totals.moving_time) + '\n';
+        response += format("Elevation Gain", stats.ytd_ride_totals.elevation_gain, 'm') + '\n';
+    }
+    if (stats.all_ride_totals) {
+        response += "*All-Time Rides:*\n";
+        response += format("Distance", stats.all_ride_totals.distance, 'km', stats.all_ride_totals.count, stats.all_ride_totals.moving_time) + '\n';
+        response += format("Elevation Gain", stats.all_ride_totals.elevation_gain, 'm') + '\n';
+    }
+
+    // Similar blocks for Runs and Swims if needed...
+    if (stats.recent_run_totals || stats.ytd_run_totals || stats.all_run_totals) {
+        response += "\n**Runs:**\n";
+        if (stats.recent_run_totals) {
+            response += "*Recent Runs (last 4 weeks):*\n";
+            response += format("Distance", stats.recent_run_totals.distance, 'km', stats.recent_run_totals.count, stats.recent_run_totals.moving_time) + '\n';
+            response += format("Elevation Gain", stats.recent_run_totals.elevation_gain, 'm') + '\n';
+        }
+        if (stats.ytd_run_totals) {
+             response += "*Year-to-Date Runs:*\n";
+             response += format("Distance", stats.ytd_run_totals.distance, 'km', stats.ytd_run_totals.count, stats.ytd_run_totals.moving_time) + '\n';
+             response += format("Elevation Gain", stats.ytd_run_totals.elevation_gain, 'm') + '\n';
+        }
+         if (stats.all_run_totals) {
+            response += "*All-Time Runs:*\n";
+            response += format("Distance", stats.all_run_totals.distance, 'km', stats.all_run_totals.count, stats.all_run_totals.moving_time) + '\n';
+            response += format("Elevation Gain", stats.all_run_totals.elevation_gain, 'm') + '\n';
+        }
+    }
+
+    // Add Swims similarly if needed
+
+    return response;
+}
+
+// Tool definition
+export const getAthleteStatsTool = {
     name: "get-athlete-stats",
     description: "Fetches the activity statistics (recent, YTD, all-time) for the authenticated athlete.",
-    inputSchema: undefined, // Use undefined or {} as per SDK expectation
+    inputSchema: GetAthleteStatsInputSchema,
+    // Remove input parameter from execute signature
     execute: async () => {
-      const token = process.env.STRAVA_ACCESS_TOKEN;
+        const token = process.env.STRAVA_ACCESS_TOKEN;
+        const athleteId = process.env.STRAVA_ATHLETE_ID;
 
-      if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
-        console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
-        // Strict return structure
-        return {
-          content: [{ type: "text" as const, text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
-          isError: true,
-        };
-      }
+        if (!token) {
+             console.error("Missing STRAVA_ACCESS_TOKEN environment variable.");
+             return {
+                content: [{ type: "text" as const, text: "Configuration error: Missing Strava access token." }],
+                isError: true
+            };
+        }
+         if (!athleteId) {
+             console.error("Missing STRAVA_ATHLETE_ID environment variable.");
+             return {
+                content: [{ type: "text" as const, text: "Configuration error: Missing Strava athlete ID." }],
+                isError: true
+            };
+        }
+        const numericAthleteId = parseInt(athleteId, 10);
+        if (isNaN(numericAthleteId)) {
+             console.error(`Invalid STRAVA_ATHLETE_ID: ${athleteId}`);
+             return {
+                content: [{ type: "text" as const, text: "Configuration error: Invalid Strava athlete ID format." }],
+                isError: true
+             };
+        }
 
-      try {
-        console.error("Fetching athlete ID for stats...");
-        const athlete = await getAuthenticatedAthlete(token);
-        const athleteId = athlete.id;
-        console.error(`Fetching stats for athlete ID: ${athleteId}...`);
-        const stats = await fetchStats(token, athleteId);
-        console.error(`Successfully fetched stats for athlete ${athlete.firstname} ${athlete.lastname}.`);
+        try {
+            console.error(`Fetching stats for athlete ${numericAthleteId}...`);
+            const stats = await fetchAthleteStats(token, numericAthleteId);
+            const formattedStats = formatStats(stats);
 
-        const statsText = formatStats(stats, athlete.measurement_preference);
-
-        // Strict return structure
-        return { content: [{ type: "text" as const, text: statsText }] };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-        console.error("Error in get-athlete-stats tool:", errorMessage);
-        // Strict return structure
-        return {
-          content: [{ type: "text" as const, text: `❌ API Error: ${errorMessage}` }],
-          isError: true,
-        };
-      }
+            console.error(`Successfully fetched stats for athlete ${numericAthleteId}.`);
+            return { content: [{ type: "text" as const, text: formattedStats }] };
+        } catch (error) {
+            console.error(`Error fetching stats for athlete ${numericAthleteId}: ${(error as Error).message}`);
+            handleApiError(error, `fetching stats for athlete ${numericAthleteId}`);
+            return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching stats." }], isError: true };
+        }
     }
 };
 

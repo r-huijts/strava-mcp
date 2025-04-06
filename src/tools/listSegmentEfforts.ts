@@ -56,11 +56,11 @@ export const listSegmentEffortsTool = {
     name: "list-segment-efforts",
     description: "Lists the authenticated athlete's efforts on a specific segment, optionally filtering by date.",
     inputSchema: ListSegmentEffortsInputSchema,
-    execute: async ({ segmentId, startDateLocal, endDateLocal, perPage }: ListSegmentEffortsInput, { log }: any) => {
+    execute: async ({ segmentId, startDateLocal, endDateLocal, perPage }: ListSegmentEffortsInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
 
         if (!token) {
-            log("error", "Missing STRAVA_ACCESS_TOKEN environment variable.");
+            console.error("Missing STRAVA_ACCESS_TOKEN environment variable.");
             return {
                 content: [{ type: "text" as const, text: "Configuration error: Missing Strava access token." }],
                 isError: true
@@ -68,7 +68,7 @@ export const listSegmentEffortsTool = {
         }
 
         try {
-            log("info", `Fetching segment efforts for segment ID: ${segmentId}...`);
+            console.error(`Fetching segment efforts for segment ID: ${segmentId}...`);
             
             // Use the new params object structure
             const efforts = await fetchSegmentEfforts(token, segmentId, {
@@ -78,17 +78,17 @@ export const listSegmentEffortsTool = {
             });
 
             if (!efforts || efforts.length === 0) {
-                log("info", `No efforts found for segment ${segmentId} with the given filters.`);
+                console.error(`No efforts found for segment ${segmentId} with the given filters.`);
                 return { content: [{ type: "text" as const, text: `No efforts found for segment ${segmentId} matching the criteria.` }] };
             }
 
-            log("info", `Successfully fetched ${efforts.length} efforts for segment ${segmentId}.`);
+            console.error(`Successfully fetched ${efforts.length} efforts for segment ${segmentId}.`);
             const effortSummaries = efforts.map(effort => formatSegmentEffort(effort)); // Use metric formatter
             const responseText = `**Segment ${segmentId} Efforts:**\n\n${effortSummaries.join("\n")}`;
 
             return { content: [{ type: "text" as const, text: responseText }] };
         } catch (error) {
-            log("error", `Error listing efforts for segment ${segmentId}: ${(error as Error).message}`);
+            console.error(`Error listing efforts for segment ${segmentId}: ${(error as Error).message}`);
             handleApiError(error, `listing efforts for segment ${segmentId}`);
             return { content: [{ type: "text" as const, text: "An unexpected error occurred while listing segment efforts." }], isError: true };
         }

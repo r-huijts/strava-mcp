@@ -35,11 +35,11 @@ export const listAthleteRoutesTool = {
     name: "list-athlete-routes",
     description: "Lists the routes created by the authenticated athlete, with pagination.",
     inputSchema: ListAthleteRoutesInputSchema,
-    execute: async ({ page = 1, perPage = 20 }: ListAthleteRoutesInput, { log }: any) => {
+    execute: async ({ page = 1, perPage = 20 }: ListAthleteRoutesInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
         
         if (!token) {
-            log("error", "Missing STRAVA_ACCESS_TOKEN in .env");
+            console.error("Missing STRAVA_ACCESS_TOKEN in .env");
             return {
                 content: [{ type: "text" as const, text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
                 isError: true
@@ -47,22 +47,22 @@ export const listAthleteRoutesTool = {
         }
         
         try {
-            log("info", `Fetching routes (page ${page}, per_page: ${perPage})...`);
+            console.error(`Fetching routes (page ${page}, per_page: ${perPage})...`);
             
             const routes = await fetchAthleteRoutes(token, page, perPage);
             
             if (!routes || routes.length === 0) {
-                log("info", `No routes found for athlete.`);
+                console.error(`No routes found for athlete.`);
                 return { content: [{ type: "text" as const, text: "No routes found for the athlete." }] };
             }
             
-            log("info", `Successfully fetched ${routes.length} routes.`);
+            console.error(`Successfully fetched ${routes.length} routes.`);
             const summaries = routes.map(route => formatRouteSummary(route));
             const responseText = `**Athlete Routes (Page ${page}):**\n\n${summaries.join("\n")}`;
             
             return { content: [{ type: "text" as const, text: responseText }] };
         } catch (error) {
-            log("error", `Error fetching routes: ${(error as Error).message}`);
+            console.error(`Error fetching routes: ${(error as Error).message}`);
             return await handleApiError(error, `listing routes`, async () => {
                 const newToken = process.env.STRAVA_ACCESS_TOKEN!;
                 const routes = await fetchAthleteRoutes(newToken, page, perPage);

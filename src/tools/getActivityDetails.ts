@@ -1,110 +1,118 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import {
-  getAuthenticatedAthlete,
-  getActivityById as fetchActivityById, // Renamed import
-  StravaDetailedActivity
+    getActivityById as fetchActivityById,
+    handleApiError,
+    StravaDetailedActivity // Type needed for formatter
 } from "../stravaClient.js";
 // import { formatDuration } from "../server.js"; // Removed, now local
 
+// Zod schema for input validation
 const GetActivityDetailsInputSchema = z.object({
-  activityId: z.number().int().positive().describe("The unique identifier of the activity to fetch details for."),
+    activityId: z.number().int().positive().describe("The unique identifier of the activity to fetch details for.")
 });
 
 type GetActivityDetailsInput = z.infer<typeof GetActivityDetailsInputSchema>;
 
-// Helper Function (kept local to this tool)
-function formatDuration(seconds: number): string {
-    if (isNaN(seconds) || seconds < 0) {
-        return 'N/A';
-    }
+// Helper Functions (Metric Only)
+function formatDuration(seconds: number | null | undefined): string {
+    if (seconds === null || seconds === undefined || isNaN(seconds) || seconds < 0) return 'N/A';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-
     const parts: string[] = [];
-    if (hours > 0) {
-        parts.push(hours.toString().padStart(2, '0'));
-    }
+    if (hours > 0) parts.push(hours.toString().padStart(2, '0'));
     parts.push(minutes.toString().padStart(2, '0'));
     parts.push(secs.toString().padStart(2, '0'));
-
     return parts.join(':');
 }
 
-function formatActivityDetails(activity: StravaDetailedActivity, units: 'feet' | 'meters'): string {
-  const distanceFactor = units === 'feet' ? 0.000621371 : 0.001;
-  const distanceUnit = units === 'feet' ? 'mi' : 'km';
-  const elevationFactor = units === 'feet' ? 3.28084 : 1;
-  const elevationUnit = units === 'feet' ? 'ft' : 'm';
-  const speedFactor = units === 'feet' ? 2.23694 : 3.6; // m/s to mph or km/h
-  const speedUnit = units === 'feet' ? 'mph' : 'km/h';
-
-  const parts = [
-    `📝 **Activity: ${activity.name}** (ID: ${activity.id})`,
-    `   - Type: ${activity.sport_type} (${activity.type})`,
-    `   - Date: ${activity.start_date_local ? new Date(activity.start_date_local).toLocaleString() : 'N/A'} (${activity.timezone || 'N/A'})`,
-    `   - Description: ${activity.description || 'None'}`,
-    `   - Distance: ${activity.distance ? (activity.distance * distanceFactor).toFixed(2) + ` ${distanceUnit}` : 'N/A'}`,
-    `   - Moving Time: ${activity.moving_time ? formatDuration(activity.moving_time) : 'N/A'}`,
-    `   - Elapsed Time: ${activity.elapsed_time ? formatDuration(activity.elapsed_time) : 'N/A'}`,
-    `   - Elevation Gain: ${activity.total_elevation_gain ? (activity.total_elevation_gain * elevationFactor).toFixed(0) + ` ${elevationUnit}` : 'N/A'}`,
-    `   - Average Speed: ${activity.average_speed ? (activity.average_speed * speedFactor).toFixed(1) + ` ${speedUnit}` : 'N/A'}`,
-    `   - Max Speed: ${activity.max_speed ? (activity.max_speed * speedFactor).toFixed(1) + ` ${speedUnit}` : 'N/A'}`,
-    `   - Calories: ${activity.calories ? activity.calories.toFixed(0) : 'N/A'}`,
-    activity.has_heartrate ? `   - Avg Heart Rate: ${activity.average_heartrate?.toFixed(0) ?? 'N/A'} bpm` : '   - Heart Rate: No data',
-    activity.has_heartrate ? `   - Max Heart Rate: ${activity.max_heartrate?.toFixed(0) ?? 'N/A'} bpm` : '',
-    activity.average_cadence ? `   - Avg Cadence: ${activity.average_cadence.toFixed(1)}` : '',
-    activity.average_temp ? `   - Avg Temp: ${activity.average_temp}°C` : '',
-    activity.average_watts ? `   - Avg Watts: ${activity.average_watts.toFixed(0)} W ${activity.device_watts ? '(Device)' : '(Estimated)'}` : '',
-    `   - Kudos: ${activity.kudos_count ?? 0}`,
-    `   - Comments: ${activity.comment_count ?? 0}`,
-    `   - Achievements: ${activity.achievement_count ?? 0}`,
-    `   - Gear: ${activity.gear?.name || 'None'}`,
-    `   - Device: ${activity.device_name || 'N/A'}`,
-    `   - Manual: ${activity.manual ? 'Yes' : 'No'}`,
-    `   - Trainer: ${activity.trainer ? 'Yes' : 'No'}`,
-    `   - Commute: ${activity.commute ? 'Yes' : 'No'}`,
-    `   - Private: ${activity.private ? 'Yes' : 'No'}`,
-  ];
-
-  return parts.filter(part => part !== '').join('\n');
+function formatDistance(meters: number | null | undefined): string {
+    if (meters === null || meters === undefined) return 'N/A';
+    return (meters / 1000).toFixed(2) + ' km';
 }
 
-// Export the tool definition directly
-export const getActivityDetails = {
+function formatElevation(meters: number | null | undefined): string {
+    if (meters === null || meters === undefined) return 'N/A';
+    return Math.round(meters) + ' m';
+}
+
+function formatSpeed(mps: number | null | undefined): string {
+    if (mps === null || mps === undefined) return 'N/A';
+    return (mps * 3.6).toFixed(1) + ' km/h'; // Convert m/s to km/h
+}
+
+function formatPace(mps: number | null | undefined): string {
+    if (mps === null || mps === undefined || mps <= 0) return 'N/A';
+    const minutesPerKm = 1000 / (mps * 60);
+    const minutes = Math.floor(minutesPerKm);
+    const seconds = Math.round((minutesPerKm - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')} /km`;
+}
+
+// Format activity details (Metric Only)
+function formatActivityDetails(activity: StravaDetailedActivity): string {
+    const date = new Date(activity.start_date_local).toLocaleString();
+    const movingTime = formatDuration(activity.moving_time);
+    const elapsedTime = formatDuration(activity.elapsed_time);
+    const distance = formatDistance(activity.distance);
+    const elevation = formatElevation(activity.total_elevation_gain);
+    const avgSpeed = formatSpeed(activity.average_speed);
+    const maxSpeed = formatSpeed(activity.max_speed);
+    const avgPace = formatPace(activity.average_speed); // Calculate pace from speed
+
+    let details = `🏃 **${activity.name}** (ID: ${activity.id})\n`;
+    details += `   - Type: ${activity.type} (${activity.sport_type})\n`;
+    details += `   - Date: ${date}\n`;
+    details += `   - Moving Time: ${movingTime}, Elapsed Time: ${elapsedTime}\n`;
+    if (activity.distance !== undefined) details += `   - Distance: ${distance}\n`;
+    if (activity.total_elevation_gain !== undefined) details += `   - Elevation Gain: ${elevation}\n`;
+    if (activity.average_speed !== undefined) {
+        details += `   - Average Speed: ${avgSpeed}`;
+        if (activity.type === 'Run') details += ` (Pace: ${avgPace})`;
+        details += '\n';
+    }
+    if (activity.max_speed !== undefined) details += `   - Max Speed: ${maxSpeed}\n`;
+    if (activity.average_cadence !== undefined && activity.average_cadence !== null) details += `   - Avg Cadence: ${activity.average_cadence.toFixed(1)}\n`;
+    if (activity.average_watts !== undefined && activity.average_watts !== null) details += `   - Avg Watts: ${activity.average_watts.toFixed(1)}\n`;
+    if (activity.average_heartrate !== undefined && activity.average_heartrate !== null) details += `   - Avg Heart Rate: ${activity.average_heartrate.toFixed(1)} bpm\n`;
+    if (activity.max_heartrate !== undefined && activity.max_heartrate !== null) details += `   - Max Heart Rate: ${activity.max_heartrate.toFixed(0)} bpm\n`;
+    if (activity.calories !== undefined) details += `   - Calories: ${activity.calories.toFixed(0)}\n`;
+    if (activity.description) details += `   - Description: ${activity.description}\n`;
+    if (activity.gear) details += `   - Gear: ${activity.gear.name}\n`;
+
+    return details;
+}
+
+// Tool definition
+export const getActivityDetailsTool = {
     name: "get-activity-details",
     description: "Fetches detailed information about a specific activity using its ID.",
     inputSchema: GetActivityDetailsInputSchema,
     execute: async ({ activityId }: GetActivityDetailsInput) => {
-      const token = process.env.STRAVA_ACCESS_TOKEN;
+        const token = process.env.STRAVA_ACCESS_TOKEN;
 
-      if (!token || token === 'YOUR_STRAVA_ACCESS_TOKEN_HERE') {
-        console.error("Missing or placeholder STRAVA_ACCESS_TOKEN in .env");
-        return {
-          content: [{ type: "text" as const, text: "❌ Configuration Error: STRAVA_ACCESS_TOKEN is missing or not set in the .env file." }],
-          isError: true,
-        };
-      }
+        if (!token) {
+            console.error("Missing STRAVA_ACCESS_TOKEN environment variable.");
+            return {
+                content: [{ type: "text" as const, text: "Configuration error: Missing Strava access token." }],
+                isError: true
+            };
+        }
 
-      try {
-        console.error(`Fetching details for activity ID: ${activityId}...`);
-        const athlete = await getAuthenticatedAthlete(token);
-        console.error(`Fetching activity details for ID: ${activityId}...`);
-        const activityDetails = await fetchActivityById(token, activityId);
-        console.error(`Successfully fetched details for activity: ${activityDetails.name}`);
+        try {
+            console.error(`Fetching details for activity ID: ${activityId}...`);
+            // Removed getAuthenticatedAthlete call
+            const activity = await fetchActivityById(token, activityId);
+            const activityDetailsText = formatActivityDetails(activity); // Use metric formatter
 
-        const detailsText = formatActivityDetails(activityDetails, athlete.measurement_preference);
-
-        return { content: [{ type: "text" as const, text: detailsText }] };
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
-        console.error(`Error in get-activity-details tool for ID ${activityId}:`, errorMessage);
-        return {
-          content: [{ type: "text" as const, text: `❌ API Error: ${errorMessage}` }],
-          isError: true,
-        };
-      }
+            console.error(`Successfully fetched details for activity: ${activity.name}`);
+            return { content: [{ type: "text" as const, text: activityDetailsText }] };
+        } catch (error) {
+            console.error(`Error fetching activity ${activityId}: ${(error as Error).message}`);
+            handleApiError(error, `fetching activity ${activityId}`);
+            return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching activity details." }], isError: true };
+        }
     }
 };
 

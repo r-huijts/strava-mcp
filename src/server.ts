@@ -1,49 +1,134 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import * as dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// --- Import individual tools ---
-import { getRecentActivities } from "./tools/getRecentActivities.js";
-import { getAthleteProfile } from "./tools/getAthleteProfile.js";
-import { getAthleteStats } from "./tools/getAthleteStats.js";
-import { getActivityDetails } from "./tools/getActivityDetails.js";
-import { listAthleteClubs } from "./tools/listAthleteClubs.js";
-import { listStarredSegments } from "./tools/listStarredSegments.js";
-import { getSegment } from "./tools/getSegment.js";
-import { exploreSegments } from "./tools/exploreSegments.js";
-import { starSegment } from "./tools/starSegment.js";
-import { getSegmentEffort } from './tools/getSegmentEffort.js';
-import { listSegmentEfforts } from './tools/listSegmentEfforts.js';
-import { listAthleteRoutes } from './tools/listAthleteRoutes.js';
-import { getRoute } from './tools/getRoute.js';
-import { exportRouteGpx } from './tools/exportRouteGpx.js';
-import { exportRouteTcx } from './tools/exportRouteTcx.js';
+// Import all tool definitions with the correct names
+import { getRecentActivities } from './tools/getRecentActivities.js'; // Original name
+import { getAthleteProfile } from './tools/getAthleteProfile.js'; // Original name
+import { getAthleteStatsTool } from "./tools/getAthleteStats.js";
+import { getActivityDetailsTool } from "./tools/getActivityDetails.js";
+import { listAthleteClubs } from './tools/listAthleteClubs.js'; // Original name
+import { listStarredSegments } from './tools/listStarredSegments.js'; // Original name
+import { getSegmentTool } from "./tools/getSegment.js";
+import { exploreSegments } from './tools/exploreSegments.js'; // Original name
+import { starSegment } from './tools/starSegment.js'; // Original name
+import { getSegmentEffortTool } from './tools/getSegmentEffort.js';
+import { listSegmentEffortsTool } from './tools/listSegmentEfforts.js';
+import { listAthleteRoutesTool } from './tools/listAthleteRoutes.js';
+import { getRouteTool } from './tools/getRoute.js';
+import { exportRouteGpx } from './tools/exportRouteGpx.js'; // Original name
+import { exportRouteTcx } from './tools/exportRouteTcx.js'; // Original name
 
-// Load environment variables from .env file
-dotenv.config();
+// --- Environment Variable Loading ---
+// Load .env file explicitly from project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+const envPath = path.join(projectRoot, '.env');
+// REMOVE THIS DEBUG LOG - Interferes with MCP Stdio transport
+// console.log(`[DEBUG] Attempting to load .env file from: ${envPath}`);
+dotenv.config({ path: envPath });
 
 const server = new McpServer({
-  name: "Strava MCP Server",
-  version: "1.0.0",
+  name: "strava-mcp",
+  version: "0.1.0",
+  description: "Provides access to Strava data via MCP.",
+  // Add more metadata if desired
 });
 
-// --- Register Tools ---
-// Correct argument order: name, description, inputSchema.shape | {}, execute
-server.tool(getRecentActivities.name, getRecentActivities.description, getRecentActivities.inputSchema.shape, getRecentActivities.execute);
-server.tool(getAthleteProfile.name, getAthleteProfile.description, {}, getAthleteProfile.execute);
-server.tool(getAthleteStats.name, getAthleteStats.description, {}, getAthleteStats.execute);
-server.tool(getActivityDetails.name, getActivityDetails.description, getActivityDetails.inputSchema.shape, getActivityDetails.execute);
-server.tool(listAthleteClubs.name, listAthleteClubs.description, {}, listAthleteClubs.execute);
-server.tool(listStarredSegments.name, listStarredSegments.description, {}, listStarredSegments.execute);
-server.tool(getSegment.name, getSegment.description, getSegment.inputSchema.shape, getSegment.execute);
-server.tool(exploreSegments.name, exploreSegments.description, exploreSegments.inputSchema.shape, exploreSegments.execute);
-server.tool(starSegment.name, starSegment.description, starSegment.inputSchema.shape, starSegment.execute);
-server.tool(getSegmentEffort.name, getSegmentEffort.description, getSegmentEffort.inputSchema.shape, getSegmentEffort.execute);
-server.tool(listSegmentEfforts.name, listSegmentEfforts.description, listSegmentEfforts.inputSchema.shape, listSegmentEfforts.execute);
-server.tool(listAthleteRoutes.name, listAthleteRoutes.description, listAthleteRoutes.inputSchema.shape, listAthleteRoutes.execute);
-server.tool(getRoute.name, getRoute.description, getRoute.inputSchema.shape, getRoute.execute);
-server.tool(exportRouteGpx.name, exportRouteGpx.description, exportRouteGpx.inputSchema.shape, exportRouteGpx.execute);
-server.tool(exportRouteTcx.name, exportRouteTcx.description, exportRouteTcx.inputSchema.shape, exportRouteTcx.execute);
+// Register all tools using server.tool and the correct imported objects
+server.tool(
+    getRecentActivities.name, // Original object
+    getRecentActivities.description,
+    getRecentActivities.inputSchema?.shape ?? {},
+    getRecentActivities.execute
+);
+server.tool(
+    getAthleteProfile.name,
+    getAthleteProfile.description,
+    {},
+    getAthleteProfile.execute
+);
+server.tool(
+    getAthleteStatsTool.name, 
+    getAthleteStatsTool.description,
+    getAthleteStatsTool.inputSchema?.shape ?? {},
+    getAthleteStatsTool.execute
+);
+server.tool(
+    getActivityDetailsTool.name, 
+    getActivityDetailsTool.description,
+    getActivityDetailsTool.inputSchema?.shape ?? {},
+    getActivityDetailsTool.execute
+);
+server.tool(
+    listAthleteClubs.name,
+    listAthleteClubs.description,
+    {},
+    listAthleteClubs.execute
+);
+server.tool(
+    listStarredSegments.name,
+    listStarredSegments.description,
+    {},
+    listStarredSegments.execute
+);
+server.tool(
+    getSegmentTool.name, 
+    getSegmentTool.description,
+    getSegmentTool.inputSchema?.shape ?? {},
+    getSegmentTool.execute
+);
+server.tool(
+    exploreSegments.name, // Original object
+    exploreSegments.description,
+    exploreSegments.inputSchema?.shape ?? {},
+    exploreSegments.execute
+);
+server.tool(
+    starSegment.name, // Original object
+    starSegment.description,
+    starSegment.inputSchema?.shape ?? {},
+    starSegment.execute
+);
+server.tool(
+    getSegmentEffortTool.name, 
+    getSegmentEffortTool.description,
+    getSegmentEffortTool.inputSchema?.shape ?? {},
+    getSegmentEffortTool.execute
+);
+server.tool(
+    listSegmentEffortsTool.name, 
+    listSegmentEffortsTool.description,
+    listSegmentEffortsTool.inputSchema?.shape ?? {},
+    listSegmentEffortsTool.execute
+);
+server.tool(
+    listAthleteRoutesTool.name, 
+    listAthleteRoutesTool.description,
+    listAthleteRoutesTool.inputSchema?.shape ?? {},
+    listAthleteRoutesTool.execute
+);
+server.tool(
+    getRouteTool.name,
+    getRouteTool.description,
+    getRouteTool.inputSchema?.shape ?? {},
+    getRouteTool.execute
+);
+server.tool(
+    exportRouteGpx.name, // Original object
+    exportRouteGpx.description,
+    exportRouteGpx.inputSchema?.shape ?? {},
+    exportRouteGpx.execute
+);
+server.tool(
+    exportRouteTcx.name, // Original object
+    exportRouteTcx.description,
+    exportRouteTcx.inputSchema?.shape ?? {},
+    exportRouteTcx.execute
+);
 
 // --- Helper Functions (Exported, if needed across tools) ---
 // Keep helper functions minimal here or move to a utils file

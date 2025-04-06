@@ -66,11 +66,11 @@ export const getSegmentEffortTool = {
     name: "get-segment-effort",
     description: "Fetches detailed information about a specific segment effort using its ID.",
     inputSchema: GetSegmentEffortInputSchema,
-    execute: async ({ effortId }: GetSegmentEffortInput, { log }: any) => {
+    execute: async ({ effortId }: GetSegmentEffortInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
 
         if (!token) {
-            log("error", "Missing STRAVA_ACCESS_TOKEN environment variable.");
+            console.error("Missing STRAVA_ACCESS_TOKEN environment variable.");
             return {
                 content: [{ type: "text" as const, text: "Configuration error: Missing Strava access token." }],
                 isError: true
@@ -78,15 +78,15 @@ export const getSegmentEffortTool = {
         }
 
         try {
-            log("info", `Fetching details for segment effort ID: ${effortId}...`);
+            console.error(`Fetching details for segment effort ID: ${effortId}...`);
             // Removed getAuthenticatedAthlete call
             const effort = await fetchSegmentEffort(token, effortId);
             const effortDetailsText = formatSegmentEffort(effort); // Use metric formatter
 
-            log("info", `Successfully fetched details for effort: ${effort.name}`);
+            console.error(`Successfully fetched details for effort: ${effort.name}`);
             return { content: [{ type: "text" as const, text: effortDetailsText }] };
         } catch (error) {
-            log("error", `Error fetching segment effort ${effortId}: ${(error as Error).message}`);
+            console.error(`Error fetching segment effort ${effortId}: ${(error as Error).message}`);
             handleApiError(error, `fetching segment effort ${effortId}`);
             return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching segment effort details." }], isError: true };
         }
