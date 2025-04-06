@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
     // getAuthenticatedAthlete as fetchAuthenticatedAthlete, // Removed
     getAthleteStats as fetchAthleteStats,
-    handleApiError,
+    // handleApiError, // Removed unused import
     StravaStats // Type needed for formatter
 } from "../stravaClient.js";
 // formatDuration is now local or in utils, not imported from server.ts
@@ -149,9 +149,15 @@ export const getAthleteStatsTool = {
             console.error(`Successfully fetched stats for athlete ${numericAthleteId}.`);
             return { content: [{ type: "text" as const, text: formattedStats }] };
         } catch (error) {
-            console.error(`Error fetching stats for athlete ${numericAthleteId}: ${(error as Error).message}`);
-            handleApiError(error, `fetching stats for athlete ${numericAthleteId}`);
-            return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching stats." }], isError: true };
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error fetching stats for athlete ${numericAthleteId}: ${errorMessage}`);
+            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
+                ? `Athlete with ID ${numericAthleteId} not found (when fetching stats).`
+                : `An unexpected error occurred while fetching stats for athlete ${numericAthleteId}. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };

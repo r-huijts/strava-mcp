@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
     listAthleteRoutes as fetchAthleteRoutes,
     StravaRoute,
-    handleApiError,
     // StravaRoute is needed for the formatter
 } from "../stravaClient.js";
 // Remove the imported formatter since we're defining our own locally
@@ -62,17 +61,15 @@ export const listAthleteRoutesTool = {
             
             return { content: [{ type: "text" as const, text: responseText }] };
         } catch (error) {
-            console.error(`Error fetching routes: ${(error as Error).message}`);
-            return await handleApiError(error, `listing routes`, async () => {
-                const newToken = process.env.STRAVA_ACCESS_TOKEN!;
-                const routes = await fetchAthleteRoutes(newToken, page, perPage);
-                if (!routes || routes.length === 0) {
-                    return { content: [{ type: "text" as const, text: "No routes found for the athlete." }] };
-                }
-                const summaries = routes.map(route => formatRouteSummary(route));
-                const responseText = `**Athlete Routes (Page ${page}):**\n\n${summaries.join("\n")}`;
-                return { content: [{ type: "text" as const, text: responseText }] };
-            });
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error listing athlete routes (page ${page}, perPage: ${perPage}): ${errorMessage}`);
+            // Removed call to handleApiError and its retry logic
+            // Note: 404 is less likely for a list endpoint like this
+            const userFriendlyMessage = `An unexpected error occurred while listing athlete routes. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };

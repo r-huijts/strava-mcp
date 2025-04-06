@@ -2,7 +2,6 @@
 import { z } from "zod";
 import {
     getActivityById as fetchActivityById,
-    handleApiError,
     StravaDetailedActivity // Type needed for formatter
 } from "../stravaClient.js";
 // import { formatDuration } from "../server.js"; // Removed, now local
@@ -109,9 +108,16 @@ export const getActivityDetailsTool = {
             console.error(`Successfully fetched details for activity: ${activity.name}`);
             return { content: [{ type: "text" as const, text: activityDetailsText }] };
         } catch (error) {
-            console.error(`Error fetching activity ${activityId}: ${(error as Error).message}`);
-            handleApiError(error, `fetching activity ${activityId}`);
-            return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching activity details." }], isError: true };
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error fetching activity ${activityId}: ${errorMessage}`);
+            // Removed call to handleApiError
+            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
+                ? `Activity with ID ${activityId} not found.`
+                : `An unexpected error occurred while fetching activity details for ID ${activityId}. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };

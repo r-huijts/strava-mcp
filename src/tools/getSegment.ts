@@ -2,7 +2,7 @@
 import { z } from "zod";
 import {
     getSegmentById as fetchSegmentById,
-    handleApiError,
+    // handleApiError, // Removed unused import
     StravaDetailedSegment // Type needed for formatter
 } from "../stravaClient.js";
 
@@ -70,21 +70,16 @@ export const getSegmentTool = {
             console.error(`Successfully fetched details for segment: ${segment.name}`);
             return { content: [{ type: "text" as const, text: segmentDetailsText }] };
         } catch (error) {
-            console.error(`Error fetching segment ${segmentId}: ${(error as Error).message}`);
-            handleApiError(error, `fetching segment ${segmentId}`);
-            return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching segment details." }], isError: true };
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error fetching segment ${segmentId}: ${errorMessage}`);
+            // Removed call to handleApiError
+            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
+                ? `Segment with ID ${segmentId} not found.`
+                : `An unexpected error occurred while fetching segment details for ID ${segmentId}. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };
-
-// Removed old registration function
-/*
-export function registerGetSegmentTool(server: McpServer) {
-    server.tool(
-        getSegment.name,
-        getSegment.description,
-        getSegment.inputSchema.shape,
-        getSegment.execute
-    );
-}
-*/ 

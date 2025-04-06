@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
     StravaDetailedSegmentEffort,
     getSegmentEffort as fetchSegmentEffort,
-    handleApiError,
 } from "../stravaClient.js";
 // import { formatDuration } from "../server.js"; // Removed, now local
 
@@ -86,9 +85,16 @@ export const getSegmentEffortTool = {
             console.error(`Successfully fetched details for effort: ${effort.name}`);
             return { content: [{ type: "text" as const, text: effortDetailsText }] };
         } catch (error) {
-            console.error(`Error fetching segment effort ${effortId}: ${(error as Error).message}`);
-            handleApiError(error, `fetching segment effort ${effortId}`);
-            return { content: [{ type: "text" as const, text: "An unexpected error occurred while fetching segment effort details." }], isError: true };
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error fetching segment effort ${effortId}: ${errorMessage}`);
+            // Removed call to handleApiError
+            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
+                ? `Segment effort with ID ${effortId} not found.`
+                : `An unexpected error occurred while fetching segment effort ${effortId}. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };

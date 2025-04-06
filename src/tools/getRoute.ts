@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getRouteById, handleApiError } from "../stravaClient.js";
+import { getRouteById /*, handleApiError */ } from "../stravaClient.js"; // Removed handleApiError import
 import { formatRouteSummary } from "../formatters.js"; // Import shared formatter
 
 // Zod schema for input validation
@@ -34,9 +34,15 @@ export const getRouteTool = {
             console.error(`Successfully fetched route ${routeId}.`);
             return { content: [{ type: "text" as const, text: summary }] };
         } catch (error) {
-            console.error(`Error fetching route ${routeId}: ${(error as Error).message}`);
-            handleApiError(error, `fetching route ${routeId}`); // Use shared error handler
-            return { content: [{ type: 'text' as const, text: 'An unexpected error occurred.' }], isError: true }; 
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error fetching route ${routeId}: ${errorMessage}`);
+            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
+                ? `Route with ID ${routeId} not found.`
+                : `An unexpected error occurred while fetching route ${routeId}. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };

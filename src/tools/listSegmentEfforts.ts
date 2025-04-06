@@ -2,7 +2,7 @@
 import { z } from "zod";
 import {
     listSegmentEfforts as fetchSegmentEfforts,
-    handleApiError,
+    // handleApiError, // Removed unused import
     StravaDetailedSegmentEffort // Type needed for formatter
 } from "../stravaClient.js";
 // We need the formatter, but can't import the full tool. Let's copy it here for now.
@@ -88,9 +88,17 @@ export const listSegmentEffortsTool = {
 
             return { content: [{ type: "text" as const, text: responseText }] };
         } catch (error) {
-            console.error(`Error listing efforts for segment ${segmentId}: ${(error as Error).message}`);
-            handleApiError(error, `listing efforts for segment ${segmentId}`);
-            return { content: [{ type: "text" as const, text: "An unexpected error occurred while listing segment efforts." }], isError: true };
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error listing efforts for segment ${segmentId}: ${errorMessage}`);
+            // Removed call to handleApiError
+            // Note: 404 is less likely for a list endpoint, but we still check
+            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
+                ? `Segment with ID ${segmentId} not found (when listing efforts).`
+                : `An unexpected error occurred while listing efforts for segment ${segmentId}. Details: ${errorMessage}`;
+            return {
+                content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
+                isError: true
+            };
         }
     }
 };
