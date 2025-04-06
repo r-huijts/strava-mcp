@@ -1,0 +1,138 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+/**
+ * Project: Strava MCP Server
+ * Purpose: Expose Strava API data to LLMs using the Model Context Protocol (MCP)
+ * Authoring Tool: Cursor
+ *
+ * This project uses the MCP TypeScript SDK and the Stdio transport layer.
+ * All tools are implemented using `McpServer.tool()` and should follow MCP standards.
+ */
+
+rules {
+  # General Behavior
+  always_follow {
+    // Use @modelcontextprotocol/sdk/server/mcp.js and server/stdio.js
+    import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
+    import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
+
+    // Use `zod` for input validation
+    import { z } from "zod"
+
+    // Read STRAVA_ACCESS_TOKEN from .env using dotenv
+    use dotenv to load environment variables
+
+    // Always return tool results using:
+    // content: [{ type: "text", text: "..." }]
+    use MCP-compliant response format
+
+    // Handle errors by returning:
+    // { content: [{ type: "text", text: "error message" }], isError: true }
+    prefer LLM-friendly errors
+  }
+
+  # Project Structure
+  ensure_files_exist [
+    "src/server.ts",
+    "src/stravaClient.ts",
+    "src/tools/getRecentActivities.ts"
+  ]
+
+  # Tool Setup
+  implement_tool "get-recent-activities" {
+    input: {
+      perPage: z.number().optional().default(5)
+    }
+    output: text summary of recent Strava activities
+    logic: call getRecentActivities() from stravaClient.ts using Axios
+    error: return MCP-formatted error if token is missing or call fails
+  }
+
+  # Axios wrapper
+  in_file "src/stravaClient.ts" {
+    export async function getRecentActivities(accessToken: string, perPage = 5) {
+      const response = await axios.get("https://www.strava.com/api/v3/athlete/activities", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        params: { per_page: perPage }
+      });
+      return response.data;
+    }
+  }
+
+  # MCP server setup
+  in_file "src/server.ts" {
+    import dotenv and call dotenv.config()
+    initialize McpServer with name: "Strava MCP Server", version: "1.0.0"
+    import getRecentActivities from stravaClient.ts
+    define tool "get-recent-activities" as described
+    start server using StdioServerTransport
+  }
+
+  # Optional Extensions
+  suggest_next_steps [
+    "Implement get-athlete-profile as a second tool",
+    "Switch to SSE transport using Express (HTTP API mode)",
+    "Add MCP resources that expose static summaries (weekly stats, etc.)",
+    "Add prompts to generate LLM text from activity data"
+  ]
+}
+
+examples {
+  // --- server.ts ---
+  import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+  import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+  import { z } from "zod";
+  import { getRecentActivities } from "./stravaClient.js";
+  import * as dotenv from "dotenv";
+  dotenv.config();
+
+  const server = new McpServer({
+    name: "Strava MCP Server",
+    version: "1.0.0"
+  });
+
+  server.tool(
+    "get-recent-activities",
+    { perPage: z.number().optional().default(5) },
+    async ({ perPage }) => {
+      const token = process.env.STRAVA_ACCESS_TOKEN;
+      if (!token) {
+        return {
+          content: [{ type: "text", text: "❌ Missing STRAVA_ACCESS_TOKEN in .env" }],
+          isError: true
+        };
+      }
+
+      try {
+        const activities = await getRecentActivities(token, perPage);
+        const text = activities.map(a =>
+          `🏃 ${a.name} — ${a.distance}m on ${a.start_date}`
+        ).join("\n");
+
+        return { content: [{ type: "text", text }] };
+      } catch (err) {
+        return {
+          content: [{ type: "text", text: `❌ API Error: ${(err as Error).message}` }],
+          isError: true
+        };
+      }
+    }
+  );
+
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+
+  // --- stravaClient.ts ---
+  import axios from "axios";
+
+  export async function getRecentActivities(accessToken: string, perPage = 5) {
+    const response = await axios.get("https://www.strava.com/api/v3/athlete/activities", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: { per_page: perPage }
+    });
+    return response.data;
+  }
+}

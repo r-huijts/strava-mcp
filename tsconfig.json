@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    /* Base Options: */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "ES2022", // Target modern Node.js versions
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "moduleDetection": "force",
+    "isolatedModules": true,
+
+    /* Strictness */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    /* If NOT transpiling with TypeScript: */
+    "moduleResolution": "Bundler", // Use "NodeNext" or "Bundler" for modern Node.js
+    "module": "ESNext",           // Align with "type": "module" in package.json
+    "noEmit": true,                // Set to false if you want tsc to emit files
+
+    /* If your code runs in the DOM: */
+    // "lib": ["es2022", "dom", "dom.iterable"],
+
+    /* If you want tsc to emit files: */
+    "outDir": "dist",
+    "sourceMap": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+  },
+  "include": ["src/**/*.ts"], // Include all TypeScript files in the src directory
+  "exclude": ["node_modules", "dist"] // Exclude node_modules and the output directory
+} 
