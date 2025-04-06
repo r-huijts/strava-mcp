@@ -2,330 +2,340 @@
 
 This project implements a Model Context Protocol (MCP) server in TypeScript that acts as a bridge to the Strava API. It exposes Strava data and functionalities as "tools" that Large Language Models (LLMs) can utilize through the MCP standard.
 
-## Overview
+## Natural Language Interaction Examples
 
-The primary goal is to allow LLM-powered applications (like AI assistants or chatbots) to access Strava information programmatically by calling the tools defined in this server.
+Ask your AI assistant questions like these to interact with your Strava data:
 
-Currently, the server provides the following tool:
+-   "Show me my recent Strava activities."
+-   "Get my Strava profile information."
+-   "What are my running stats for this year on Strava?"
+-   "Give me the details for my last run (activity ID 12345)."
+-   "What Strava clubs am I in?"
+-   "List the segments I starred near Boulder, Colorado."
+-   "Star the 'Flagstaff Road Climb' segment (ID 654321) for me."
+-   "Show my efforts on the 'Sunshine Canyon' segment (ID 987654) this month."
+-   "List my saved Strava routes."
+-   "What is the elevation gain for route 112233?"
+-   "Export my 'Boulder Loop' route (ID 7654321) as a GPX file."
 
--   **`get-recent-activities`**: Fetches a list of the authenticated user's most recent activities from Strava.
+## Features
 
-## How it Works
+-   🏃 Access recent activities, profile, and stats.
+-   🗺️ Explore, view, star, and manage segments.
+-   ⏱️ View detailed activity and segment effort information.
+-   📍 List and view details of saved routes.
+-   💾 Export routes in GPX or TCX format to the local filesystem.
+-   🤖 AI-friendly JSON responses via MCP.
+-   🔧 Uses Strava API V3.
 
-1.  **MCP Server:** Built using the [`@modelcontextprotocol/sdk`](https://www.npmjs.com/package/@modelcontextprotocol/sdk).
-2.  **Strava API Client:** Uses `axios` to make requests to the official Strava V3 API (`https://developers.strava.com/docs/reference/`).
-3.  **Input Validation:** Leverages `zod` for robust validation of tool inputs.
-4.  **Transport:** Currently uses `StdioServerTransport` for communication over standard input/output, suitable for direct integration or simple testing.
-5.  **Configuration:** Reads the necessary Strava API access token from a `.env` file using `dotenv`.
+## Installation & Setup
 
-## Available Tools
+1.  **Prerequisites:**
+    -   Node.js (v18 or later recommended)
+    -   npm (usually comes with Node.js)
+    -   A Strava Account
+
+2.  **Clone Repository:**
+    ```bash
+    git clone <repository_url> strava-mcp
+    cd strava-mcp
+    ```
+    *(Replace `<repository_url>` with the actual URL)*
+
+3.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
+
+4.  **Configure Environment Variables:**
+    -   Copy the example `.env.example` file to `.env`:
+        ```bash
+        cp .env.example .env
+        ```
+    -   Edit the `.env` file:
+        ```dotenv
+        # Strava API Access Token
+        # Get yours from https://www.strava.com/settings/api
+        STRAVA_ACCESS_TOKEN=YOUR_COPIED_ACCESS_TOKEN_HERE
+
+        # Optional: Define a path for saving exported route files (GPX/TCX)
+        # Ensure this directory exists and the server process has write permissions.
+        # Example: ROUTE_EXPORT_PATH=/Users/your_username/strava-exports
+        ROUTE_EXPORT_PATH=
+        ```
+    -   **Obtain Strava Access Token:**
+        1.  Go to your Strava API Settings page: [https://www.strava.com/settings/api](https://www.strava.com/settings/api)
+        2.  Create an API application if you haven't already.
+        3.  Copy the "Your Access Token" value.
+        4.  Paste this token into the `.env` file as the value for `STRAVA_ACCESS_TOKEN`.
+    -   **Set Export Path (Optional):** If you want to use the `export-route-gpx` or `export-route-tcx` tools, set `ROUTE_EXPORT_PATH` to an **absolute path** to a directory where the server process has write permissions. Exported files will be saved here.
+
+5.  **Build the Project:**
+    ```bash
+    npm run build
+    ```
+
+6.  **Run the Server:**
+    ```bash
+    npm start
+    ```
+    The server will connect via Stdio.
+
+## Usage Examples
+
+An LLM assistant (like Claude) can use the tools provided by this server based on natural language prompts. The assistant will typically identify the correct tool and extract the necessary parameters from the user's request.
+
+-   **User:** "Show my last 5 activities."
+    -   **LLM Action:** Calls `get-recent-activities` with `perPage: 5`.
+-   **User:** "What was my average heart rate on activity 987654321?"
+    -   **LLM Action:** Calls `get-activity-details` with `activityId: 987654321`. (The LLM would then parse the response to answer the specific question).
+-   **User:** "Find cycling segments near 40.01,-105.27,40.03,-105.25 that are Cat 4 or harder."
+    -   **LLM Action:** Calls `explore-segments` with `bounds: "40.01,-105.27,40.03,-105.25"`, `activityType: "riding"`, `maxCat: 4`.
+-   **User:** "Save route 12345 as a GPX file."
+    -   **LLM Action:** Calls `export-route-gpx` with `routeId: 12345`. (Requires `ROUTE_EXPORT_PATH` to be configured).
+
+## API Reference
+
+The server exposes the following MCP tools:
+
+---
 
 ### `get-recent-activities`
 
 Fetches the authenticated user's recent activities.
 
--   **Input Parameter:**
-    -   `perPage` (optional, number): The number of activities to retrieve. Defaults to 30 if not specified.
--   **Output:** A formatted text string listing the recent activities, including name, distance, and date.
+-   **When to use:** When the user asks about their recent workouts, activities, runs, rides, etc.
+-   **Parameters:**
+    -   `perPage` (optional):
+        -   Type: `number`
+        -   Description: Number of activities to retrieve.
+        -   Default: 30
+-   **Output:** Formatted text list of recent activities (Name, ID, Distance, Date).
+-   **Errors:** Missing/invalid token, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
-An LLM could trigger this tool based on user prompts like:
-
--   "Show me my recent Strava activities."
--   "What were my last 5 workouts on Strava?" (LLM would translate this to call the tool with `perPage: 5`)
--   "List my Strava activities."
--   "Can you get my latest runs from Strava?"
+---
 
 ### `get-athlete-profile`
 
 Fetches the profile information for the authenticated athlete.
 
--   **Input Parameters:** None
--   **Output:** A formatted text string containing key details from the athlete's profile, such as name, username, location, weight, premium status, and join date.
+-   **When to use:** When the user asks for their profile details, username, location, weight, premium status, etc.
+-   **Parameters:** None
+-   **Output:** Formatted text string with profile details.
+-   **Errors:** Missing/invalid token, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Get my Strava profile info."
--   "Show me my Strava profile."
--   "What information is in my Strava profile?"
--   "Am I a premium member on Strava?"
+---
 
 ### `get-athlete-stats`
 
-Fetches the activity statistics (recent, YTD, all-time totals for rides, runs, swims, and records) for the authenticated athlete.
+Fetches activity statistics (recent, YTD, all-time) for the authenticated athlete.
 
--   **Input Parameters:** None
--   **Output:** A formatted text string summarizing the athlete's stats, including counts, distances, times, and elevation gain for different activity types and periods. Respects the athlete's measurement preference (imperial/metric).
+-   **When to use:** When the user asks for their overall statistics, totals for runs/rides/swims, personal records (longest ride, biggest climb).
+-   **Parameters:** None
+-   **Output:** Formatted text summary of stats, respecting user's measurement preference.
+-   **Errors:** Missing/invalid token, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Show my Strava stats."
--   "What are my running stats for this year?"
--   "Get my all-time ride totals from Strava."
--   "What's my longest ride distance?"
+---
 
 ### `get-activity-details`
 
-Fetches detailed information for a specific activity using its ID.
+Fetches detailed information about a specific activity using its ID.
 
--   **Input Parameters:**
-    -   `activityId` (required, number): The unique identifier of the activity to fetch details for.
--   **Output:** A formatted text string containing detailed information about the activity, such as name, type, date, description, distance, time, elevation, speed, heart rate (if available), calories, gear, device, etc. Respects the athlete's measurement preference.
+-   **When to use:** When the user asks for details about a *specific* activity identified by its ID.
+-   **Parameters:**
+    -   `activityId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the activity.
+-   **Output:** Formatted text string with detailed activity information (type, date, distance, time, speed, HR, power, gear, etc.), respecting user's measurement preference.
+-   **Errors:** Missing/invalid token, Invalid `activityId`, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Get the details for activity 1234567890."
--   "Show me the info for my run with ID 987654321."
--   "What was the average speed for activity 12345?"
--   "Tell me more about activity 98765."
+---
 
 ### `list-athlete-clubs`
 
-Lists the clubs that the authenticated athlete is currently a member of.
+Lists the clubs the authenticated athlete is a member of.
 
--   **Input Parameters:** None
--   **Output:** A formatted text list of the athlete's clubs, including name, sport type, member count, location, and privacy status.
+-   **When to use:** When the user asks about the clubs they have joined.
+-   **Parameters:** None
+-   **Output:** Formatted text list of clubs (Name, ID, Sport, Members, Location).
+-   **Errors:** Missing/invalid token, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "What Strava clubs am I in?"
--   "List my clubs on Strava."
--   "Show me the clubs I've joined."
+---
 
 ### `list-starred-segments`
 
-Lists the segments that the authenticated athlete has starred.
+Lists the segments starred by the authenticated athlete.
 
--   **Input Parameters:** None
--   **Output:** A formatted text list of starred segments, including name, ID, activity type, distance, average grade, and location.
+-   **When to use:** When the user asks about their starred or favorite segments.
+-   **Parameters:** None
+-   **Output:** Formatted text list of starred segments (Name, ID, Type, Distance, Grade, Location).
+-   **Errors:** Missing/invalid token, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Show me my starred segments."
--   "List the segments I starred on Strava."
--   "What are my favorite segments?"
+---
 
 ### `get-segment`
 
-Fetches detailed information for a specific segment using its ID.
+Fetches detailed information about a specific segment using its ID.
 
--   **Input Parameters:**
-    -   `segmentId` (required, number): The unique identifier of the segment to fetch.
--   **Output:** A formatted text string containing detailed segment information, including name, distance, grade, elevation, location, star count, effort count, etc. Respects the athlete's measurement preference.
+-   **When to use:** When the user asks for details about a *specific* segment identified by its ID.
+-   **Parameters:**
+    -   `segmentId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the segment.
+-   **Output:** Formatted text string with detailed segment information (distance, grade, elevation, location, stars, efforts, etc.), respecting user's measurement preference.
+-   **Errors:** Missing/invalid token, Invalid `segmentId`, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Get details for segment 12345."
--   "Show me the info for segment 987654."
--   "What is the average grade of segment 123?"
+---
 
 ### `explore-segments`
 
 Searches for popular segments within a given geographical area (bounding box).
 
--   **Input Parameters:**
-    -   `bounds` (required, string): A comma-separated string of `south_west_lat,south_west_lng,north_east_lat,north_east_lng`.
-    -   `activityType` (optional, string): Filter by activity type (`running` or `riding`).
-    -   `minCat` (optional, number): Minimum climb category (0-5). Requires `activityType: 'riding'`.
-    -   `maxCat` (optional, number): Maximum climb category (0-5). Requires `activityType: 'riding'`.
--   **Output:** A formatted text list of segments found within the bounds, matching the filters, including name, ID, climb category, distance, grade, and elevation difference.
+-   **When to use:** When the user wants to find or discover segments in a specific geographic area, optionally filtering by activity type or climb category.
+-   **Parameters:**
+    -   `bounds` (required):
+        -   Type: `string`
+        -   Description: Comma-separated: `south_west_lat,south_west_lng,north_east_lat,north_east_lng`.
+    -   `activityType` (optional):
+        -   Type: `string` (`"running"` or `"riding"`)
+        -   Description: Filter by activity type.
+    -   `minCat` (optional):
+        -   Type: `number` (0-5)
+        -   Description: Minimum climb category. Requires `activityType: 'riding'`.
+    -   `maxCat` (optional):
+        -   Type: `number` (0-5)
+        -   Description: Maximum climb category. Requires `activityType: 'riding'`.
+-   **Output:** Formatted text list of found segments (Name, ID, Climb Cat, Distance, Grade, Elevation).
+-   **Errors:** Missing/invalid token, Invalid `bounds` format, Invalid filter combination, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Explore running segments near [specific location coordinates]."
--   "Find popular cycling segments within the bounds 37.8,-122.5,37.9,-122.4."
--   "Search for Cat 3 or Cat 4 climbs around [coordinates]."
+---
 
 ### `star-segment`
 
 Stars or unstars a specific segment for the authenticated athlete.
 
--   **Input Parameters:**
-    -   `segmentId` (required, number): The unique identifier of the segment to star/unstar.
-    -   `starred` (required, boolean): Set to `true` to star the segment, `false` to unstar it.
--   **Output:** A success message confirming the action and the segment's new starred status.
+-   **When to use:** When the user explicitly asks to star, favorite, unstar, or unfavorite a specific segment identified by its ID.
+-   **Parameters:**
+    -   `segmentId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the segment.
+    -   `starred` (required):
+        -   Type: `boolean`
+        -   Description: `true` to star, `false` to unstar.
+-   **Output:** Success message confirming the action and the segment's new starred status.
+-   **Errors:** Missing/invalid token, Invalid `segmentId`, Strava API errors (e.g., segment not found, rate limit).
 
-#### Example Natural Language Queries for LLMs
-
--   "Star segment 12345 for me."
--   "Add segment 98765 to my favorites."
--   "Unstar segment 54321."
--   "Remove segment 11223 from my starred segments."
+---
 
 ### `get-segment-effort`
 
-Fetches detailed information for a specific segment effort using its ID.
+Fetches detailed information about a specific segment effort using its ID.
 
--   **Input Parameters:**
-    -   `effortId` (required, number): The unique identifier of the segment effort to fetch.
--   **Output:** A formatted text string containing detailed segment effort information, including segment name, activity ID, elapsed/moving time, distance, heart rate, power, KOM/PR ranks, etc.
+-   **When to use:** When the user asks for details about a *specific* segment effort identified by its ID.
+-   **Parameters:**
+    -   `effortId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the segment effort.
+-   **Output:** Formatted text string with detailed effort information (segment name, activity ID, time, distance, HR, power, rank, etc.).
+-   **Errors:** Missing/invalid token, Invalid `effortId`, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Get details for segment effort 1234567890123."
--   "Show me the info for effort ID 9876543210987."
--   "What was my time on segment effort 1122334455?"
+---
 
 ### `list-segment-efforts`
 
 Lists the authenticated athlete's efforts on a given segment, optionally filtered by date.
 
--   **Input Parameters:**
-    -   `segmentId` (required, number): The ID of the segment for which to list efforts.
-    -   `startDateLocal` (optional, string): Filter efforts starting after this ISO 8601 date-time.
-    -   `endDateLocal` (optional, string): Filter efforts ending before this ISO 8601 date-time.
-    -   `perPage` (optional, number): Number of results per page (default 30).
--   **Output:** A formatted text list of matching segment efforts, including time, distance, date, and PR/KOM rank info.
+-   **When to use:** When the user asks to list their efforts or attempts on a specific segment, possibly within a date range.
+-   **Parameters:**
+    -   `segmentId` (required):
+        -   Type: `number`
+        -   Description: The ID of the segment.
+    -   `startDateLocal` (optional):
+        -   Type: `string` (ISO 8601 format)
+        -   Description: Filter efforts starting after this date-time.
+    -   `endDateLocal` (optional):
+        -   Type: `string` (ISO 8601 format)
+        -   Description: Filter efforts ending before this date-time.
+    -   `perPage` (optional):
+        -   Type: `number`
+        -   Description: Number of results per page.
+        -   Default: 30
+-   **Output:** Formatted text list of matching segment efforts.
+-   **Errors:** Missing/invalid token, Invalid `segmentId`, Invalid date format, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "List my efforts on segment 12345."
--   "Show my efforts on segment 987654 after January 1st, 2023."
--   "Get my 5 most recent efforts for segment 112233."
+---
 
 ### `list-athlete-routes`
 
 Lists the routes created by the authenticated athlete.
 
--   **Input Parameters:**
-    -   `page` (optional, number): Page number for pagination.
-    -   `perPage` (optional, number): Number of routes per page (default 30).
--   **Output:** A formatted text list of the athlete's routes, including name, ID, type, distance, elevation gain, and creation date.
+-   **When to use:** When the user asks to see the routes they have created or saved.
+-   **Parameters:**
+    -   `page` (optional):
+        -   Type: `number`
+        -   Description: Page number for pagination.
+    -   `perPage` (optional):
+        -   Type: `number`
+        -   Description: Number of routes per page.
+        -   Default: 30
+-   **Output:** Formatted text list of routes (Name, ID, Type, Distance, Elevation, Date).
+-   **Errors:** Missing/invalid token, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "List my Strava routes."
--   "Show me the routes I created."
--   "Get the second page of my routes."
+---
 
 ### `get-route`
 
 Fetches detailed information for a specific route using its ID.
 
--   **Input Parameters:**
-    -   `routeId` (required, number): The unique identifier of the route to fetch.
--   **Output:** A formatted text string containing route details, including name, ID, type, distance, elevation gain, estimated time, creation date, description, and number of segments.
+-   **When to use:** When the user asks for details about a *specific* route identified by its ID.
+-   **Parameters:**
+    -   `routeId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the route.
+-   **Output:** Formatted text string with route details (Name, ID, Type, Distance, Elevation, Est. Time, Description, Segment Count).
+-   **Errors:** Missing/invalid token, Invalid `routeId`, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Get details for route 1234567."
--   "Show me the info for route 987654."
--   "What is the distance of route 112233?"
+---
 
 ### `export-route-gpx`
 
-Exports a specific route in GPX format and saves it to a pre-configured local directory on the server machine. **Note:** This requires the `ROUTE_EXPORT_PATH` environment variable to be set correctly.
+Exports a specific route in GPX format and saves it locally.
 
--   **Input Parameters:**
-    -   `routeId` (required, number): The unique identifier of the route to export.
--   **Output:** A success message indicating the file path where the GPX file was saved, or an error message if saving failed.
+-   **When to use:** When the user explicitly asks to export or save a specific route as a GPX file.
+-   **Prerequisite:** The `ROUTE_EXPORT_PATH` environment variable must be correctly configured on the server.
+-   **Parameters:**
+    -   `routeId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the route.
+-   **Output:** Success message indicating the save location, or an error message.
+-   **Errors:** Missing/invalid token, Missing/invalid `ROUTE_EXPORT_PATH`, File system errors (permissions, disk space), Invalid `routeId`, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
-
--   "Export route 1234567 as GPX."
--   "Save the GPX file for route 987654."
+---
 
 ### `export-route-tcx`
 
-Exports a specific route in TCX format and saves it to a pre-configured local directory on the server machine. **Note:** This requires the `ROUTE_EXPORT_PATH` environment variable to be set correctly.
+Exports a specific route in TCX format and saves it locally.
 
--   **Input Parameters:**
-    -   `routeId` (required, number): The unique identifier of the route to export.
--   **Output:** A success message indicating the file path where the TCX file was saved, or an error message if saving failed.
+-   **When to use:** When the user explicitly asks to export or save a specific route as a TCX file.
+-   **Prerequisite:** The `ROUTE_EXPORT_PATH` environment variable must be correctly configured on the server.
+-   **Parameters:**
+    -   `routeId` (required):
+        -   Type: `number`
+        -   Description: The unique identifier of the route.
+-   **Output:** Success message indicating the save location, or an error message.
+-   **Errors:** Missing/invalid token, Missing/invalid `ROUTE_EXPORT_PATH`, File system errors (permissions, disk space), Invalid `routeId`, Strava API errors.
 
-#### Example Natural Language Queries for LLMs
+---
 
--   "Export route 1234567 as TCX."
--   "Save the TCX file for route 987654."
+## Contributing
 
-## Setup and Usage
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### 1. Prerequisites
+## License
 
--   Node.js (v18 or later recommended)
--   npm (usually comes with Node.js)
--   A Strava Account
+This project is licensed under the MIT License - see the LICENSE file for details. (Assuming MIT, update if different)
 
-### 2. Obtain Strava Access Token
+## Acknowledgments
 
-This server requires a Strava API access token to authenticate requests.
-
-1.  Go to your Strava API Settings page: [https://www.strava.com/settings/api](https://www.strava.com/settings/api)
-2.  If you haven't created an API application yet, do so. You can fill in basic details (name, website, etc.). The specifics aren't critical for just getting your personal token.
-3.  On the API settings page, find the section titled **"Your Access Token"**. Copy this token.
-
-### 3. Configure Environment Variables
-
-1.  This project uses a `.env` file to store the access token.
-2.  There should be a `.env` file in the project root (if not, you can duplicate `.gitignore`'d `.env.example` if one exists, or create it).
-3.  Open the `.env` file and add your access token:
-
-    ```dotenv
-    # Strava API Access Token
-    # Get yours from https://www.strava.com/settings/api
-    STRAVA_ACCESS_TOKEN=YOUR_COPIED_ACCESS_TOKEN_HERE
-
-    # Optional: Define a path for saving exported route files (GPX/TCX)
-    # Ensure this directory exists and the server process has write permissions.
-    # Example: ROUTE_EXPORT_PATH=/Users/your_username/strava-exports
-    ROUTE_EXPORT_PATH=
-    ```
-
-    **Important:** Replace `YOUR_COPIED_ACCESS_TOKEN_HERE` with the actual token you copied from the Strava settings page.
-
-    **Optional:** If you intend to use the `export-route-gpx` or `export-route-tcx` tools, you **must** set `ROUTE_EXPORT_PATH` to a valid, writable directory path on the machine where the server will run. The server will save exported files (e.g., `route-12345.gpx`) directly into this folder.
-
-### 4. Install Dependencies
-
-Navigate to the project's root directory in your terminal and run:
-
-```bash
-npm install
-```
-
-### 5. Running the Server
-
--   **Development Mode:** For development, use `tsx` which compiles and runs TypeScript on the fly. This allows for faster iteration without a separate build step.
-
-    ```bash
-    npm run dev
-    ```
-
-    The server will start, and diagnostic messages will be printed to `stderr`. It will listen for MCP requests on `stdin` and send responses to `stdout`.
-
--   **Production Mode:** First, build the JavaScript code:
-
-    ```bash
-    npm run build
-    ```
-
-    Then, run the compiled JavaScript using Node.js:
-
-    ```bash
-    npm start
-    ```
-
-## Project Structure
-
-```
-.
-├── .env                # Stores environment variables (like API keys) - **DO NOT COMMIT**
-├── .gitignore          # Specifies intentionally untracked files that Git should ignore
-├── package.json        # Node.js project metadata and dependencies
-├── package-lock.json   # Records exact versions of dependencies
-├── README.md           # This file
-├── src/
-│   ├── server.ts       # Main MCP server logic, tool registration
-│   └── stravaClient.ts # Axios wrapper for Strava API calls
-├── tsconfig.json       # TypeScript compiler options
-└── dist/               # Compiled JavaScript output (after running npm run build)
-```
-
-## Next Steps / Future Enhancements
-
--   Add more Strava API tools (e.g., `get-athlete-profile`, `get-activity-details`).
--   Implement different MCP transports (e.g., HTTP/SSE using Express for web-based interactions).
--   Add more sophisticated error handling and logging.
--   Implement OAuth 2.0 flow for user authentication instead of a static token.
--   Define MCP Resources for static or summarized data. 
+-   Strava for providing the public API.
+-   The Model Context Protocol (MCP) community. 
