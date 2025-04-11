@@ -83,7 +83,7 @@ Ask your AI assistant questions like these to interact with your Strava data:
     npm install
     ```
 
-4.  ## Authentication Script Walkthrough
+## Authentication Script Walkthrough
 
 The `setup-auth.ts` script makes it easy to set up authentication with the Strava API. Here's a detailed walkthrough with screenshots and explanations:
 
