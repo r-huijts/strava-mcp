@@ -65,36 +65,9 @@ Ask your AI assistant questions like these to interact with your Strava data:
    - npm (usually comes with Node.js)
    - A Strava Account
 
-You can integrate this server with Claude Desktop in two ways:
+You can integrate this server with Claude Desktop as follows:
 
-### 1. Using Claude Desktop with NPM Package
-
-Update your Claude configuration file:
-
-```json
-{
-  "mcpServers": {
-    "strava-mcp": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "strava-mcp-server"
-      ],
-      "env": {
-        "STRAVA_CLIENT_ID": "your_client_id",
-        "STRAVA_CLIENT_SECRET": "your_client_secret",
-        "STRAVA_ACCESS_TOKEN": "your_access_token",
-        "STRAVA_REFRESH_TOKEN": "your_refresh_token",
-        "ROUTE_EXPORT_PATH": "/optional/path/for/route/exports"
-      }
-    }
-  }
-}
-```
-
-You'll need to obtain your Strava API credentials using the script as described below
-
-### 2. From Source
+### 1. From Source
 
 1. **Clone Repository:**
    ```bash
