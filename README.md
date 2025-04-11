@@ -74,48 +74,106 @@ Ask your AI assistant questions like these to interact with your Strava data:
 
 2.  **Clone Repository:**
     ```bash
-    git clone <repository_url> strava-mcp
+    git clone https://github.com/r-huijts/strava-mcp.git
     cd strava-mcp
     ```
-    *(Replace `<repository_url>` with the actual URL)*
 
 3.  **Install Dependencies:**
     ```bash
     npm install
     ```
 
-4.  **Strava API Application Setup:**
-    -   Go to your Strava API Settings: [https://www.strava.com/settings/api](https://www.strava.com/settings/api)
-    -   Create a new API application (if you don't have one already).
-    -   **Crucially:** Under "Authorization Callback Domain", enter `localhost`.
-    -   Note down your application's **Client ID** and **Client Secret**. You will need these shortly.
-    -   Leave the default application settings as they are unless you have specific needs.
+4.  ## Authentication Script Walkthrough
 
-5.  **Generate API Tokens using the Setup Script:**
-    -   This project includes a script to handle the Strava OAuth flow and obtain the necessary API tokens.
-    -   Run the setup script:
-        ```bash
-        npx ts-node scripts/setup-auth.ts
-        ```
-    -   **Follow the Prompts:**
-        1.  The script will first check your `.env` file (creating it if it doesn't exist) for your `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET`.
-        2.  If not found in `.env`, it will prompt you to enter the Client ID and Client Secret you obtained from the Strava API settings page.
-        3.  It will then display a **Strava Authorization URL**. Copy this URL.
-        4.  Paste the URL into your web browser and navigate to it.
-        5.  You will be asked to authorize your application to access your Strava data with the required scopes (`profile:read_all`, `activity:read_all`). Click **Authorize**.
-        6.  After authorizing, Strava will redirect your browser to a `localhost` URL (e.g., `http://localhost/?state=&code=SOME_LONG_CODE&scope=read,activity:read_all,profile:read_all`). This page might show a "This site can't be reached" error, which is **expected and normal** because you aren't running a web server on `localhost`.
-        7.  **Important:** Look at the URL in your browser's address bar. Copy the value of the `code` parameter. It will be a long string of letters and numbers (e.g., `SOME_LONG_CODE` in the example above).
-        8.  Go back to your terminal where the script is running and paste this **authorization code** when prompted.
-        9.  The script will exchange this code for an **Access Token** and a **Refresh Token**.
-        10. It will ask if you want to save these tokens to your `.env` file. Type `yes` or `y` and press Enter.
+The `setup-auth.ts` script makes it easy to set up authentication with the Strava API. Here's a detailed walkthrough with screenshots and explanations:
 
-    -   Your `.env` file should now contain:
-        ```dotenv
-        STRAVA_CLIENT_ID=YOUR_CLIENT_ID
-        STRAVA_CLIENT_SECRET=YOUR_CLIENT_SECRET
-        STRAVA_ACCESS_TOKEN=GENERATED_ACCESS_TOKEN
-        STRAVA_REFRESH_TOKEN=GENERATED_REFRESH_TOKEN
-        ```
+### Create a Strava API Application
+
+Before running the script, go to [https://www.strava.com/settings/api](https://www.strava.com/settings/api) and create a new application:
+
+- Enter your application details (name, website, description)
+- Important: Set "Authorization Callback Domain" to `localhost`
+- Note down your Client ID and Client Secret
+
+### Run the Setup Script
+
+```bash
+# In your strava-mcp directory
+npx tsx scripts/setup-auth.ts
+```
+
+You'll see a welcome message:
+
+```
+--- Strava API Token Setup ---
+```
+
+### Enter Client Credentials
+
+If your `.env` file doesn't already contain your Strava API credentials, you'll be prompted to enter them:
+
+```
+Enter your Strava Application Client ID: [your_client_id]
+Enter your Strava Application Client Secret: [your_client_secret]
+```
+
+### Browser Authorization
+
+The script will generate an authorization URL:
+
+```
+Step 1: Authorize Application
+Please visit the following URL in your browser:
+
+https://www.strava.com/oauth/authorize?client_id=12345&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=profile:read_all,activity:read_all
+
+After authorizing, Strava will redirect you to http://localhost.
+Copy the 'code' value from the URL in your browser's address bar.
+(e.g., http://localhost/?state=&code=THIS_PART&scope=...)
+```
+
+1. Open this URL in your browser
+2. Log in to Strava if needed
+3. Click "Authorize" on the permission screen
+4. You'll be redirected to `localhost` (which will show a connection error - this is normal)
+5. Look at your browser's address bar to find the authorization code:
+   ```
+   http://localhost/?state=&code=1a2b3c4d5e6f7g8h9i0j&scope=read,activity:read_all,profile:read_all
+   ```
+   The code is the part after `code=` and before `&scope=`
+
+### Complete the OAuth Flow
+
+1. Copy the authorization code from your browser
+2. Return to your terminal and paste the code when prompted:
+   ```
+   Paste the authorization code here: 1a2b3c4d5e6f7g8h9i0j
+   ```
+3. The script will exchange this code for access and refresh tokens
+
+### Save Tokens to .env
+
+When asked to save the tokens to your .env file, enter "yes":
+
+```
+Do you want to save these tokens to your .env file? (yes/no): yes
+✅ Tokens successfully saved to .env file.
+```
+
+Your `.env` file will now contain all required credentials:
+
+```
+STRAVA_CLIENT_ID=your_client_id
+STRAVA_CLIENT_SECRET=your_client_secret
+STRAVA_ACCESS_TOKEN=your_generated_access_token
+STRAVA_REFRESH_TOKEN=your_generated_refresh_token
+```
+
+## Token Handling
+
+This server implements automatic token refreshing. When the initial access token expires (typically after 6 hours), the server will automatically use the refresh token stored in `.env` to obtain a new access token and refresh token. These new tokens are then updated in both the running process and the `.env` file, ensuring continuous operation.
+
+You only need to run the `scripts/setup-auth.ts` script once for the initial setup.
 
 6.  **Configure Export Path (Optional):**
     -   If you intend to use the `export-route-gpx` or `export-route-tcx` tools, you need to specify a directory for saving exported files.
@@ -162,18 +220,6 @@ Ask your AI assistant questions like these to interact with your Strava data:
     -   Ensure the `command` is `node` and the `args` point to the compiled `dist/server.js` file.
     -   Restart your MCP client for the changes to take effect.
 
-## Usage Examples
-
-An LLM assistant (like Claude) can use the tools provided by this server based on natural language prompts. The assistant will typically identify the correct tool and extract the necessary parameters from the user's request.
-
--   **User:** "Show my last 5 activities."
-    -   **LLM Action:** Calls `get-recent-activities` with `perPage: 5`.
--   **User:** "What was my average heart rate on activity 987654321?"
-    -   **LLM Action:** Calls `get-activity-details` with `activityId: 987654321`. (The LLM would then parse the response to answer the specific question).
--   **User:** "Find cycling segments near 40.01,-105.27,40.03,-105.25 that are Cat 4 or harder."
-    -   **LLM Action:** Calls `explore-segments` with `bounds: "40.01,-105.27,40.03,-105.25"`, `activityType: "riding"`, `maxCat: 4`.
--   **User:** "Save route 12345 as a GPX file."
-    -   **LLM Action:** Calls `export-route-gpx` with `routeId: 12345`. (Requires `ROUTE_EXPORT_PATH` to be configured).
 
 ## API Reference
 
@@ -416,116 +462,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the LICENSE file for details. (Assuming MIT, update if different)
 
-## Acknowledgments
 
--   Strava for providing the public API.
--   The Model Context Protocol (MCP) community.
-
-## Token Handling
-
-This server implements automatic token refreshing. When the initial access token expires (typically after 6 hours), the server will automatically use the refresh token stored in `.env` to obtain a new access token and refresh token. These new tokens are then updated in both the running process and the `.env` file, ensuring continuous operation.
-
-You only need to run the `scripts/setup-auth.ts` script once for the initial setup.
-
-## Authentication Script Walkthrough
-
-The `setup-auth.ts` script makes it easy to set up authentication with the Strava API. Here's a detailed walkthrough with screenshots and explanations:
-
-### 1. Create a Strava API Application
-
-Before running the script, go to [https://www.strava.com/settings/api](https://www.strava.com/settings/api) and create a new application:
-
-- Enter your application details (name, website, description)
-- Important: Set "Authorization Callback Domain" to `localhost`
-- Note down your Client ID and Client Secret
-
-### 2. Run the Setup Script
-
-```bash
-# In your strava-mcp directory
-npx ts-node scripts/setup-auth.ts
-```
-
-You'll see a welcome message:
-
-```
---- Strava API Token Setup ---
-```
-
-### 3. Enter Client Credentials
-
-If your `.env` file doesn't already contain your Strava API credentials, you'll be prompted to enter them:
-
-```
-Enter your Strava Application Client ID: [your_client_id]
-Enter your Strava Application Client Secret: [your_client_secret]
-```
-
-### 4. Browser Authorization
-
-The script will generate an authorization URL:
-
-```
-Step 1: Authorize Application
-Please visit the following URL in your browser:
-
-https://www.strava.com/oauth/authorize?client_id=12345&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=profile:read_all,activity:read_all
-
-After authorizing, Strava will redirect you to http://localhost.
-Copy the 'code' value from the URL in your browser's address bar.
-(e.g., http://localhost/?state=&code=THIS_PART&scope=...)
-```
-
-1. Open this URL in your browser
-2. Log in to Strava if needed
-3. Click "Authorize" on the permission screen
-4. You'll be redirected to `localhost` (which will show a connection error - this is normal)
-5. Look at your browser's address bar to find the authorization code:
-   ```
-   http://localhost/?state=&code=1a2b3c4d5e6f7g8h9i0j&scope=read,activity:read_all,profile:read_all
-   ```
-   The code is the part after `code=` and before `&scope=`
-
-### 5. Complete the OAuth Flow
-
-1. Copy the authorization code from your browser
-2. Return to your terminal and paste the code when prompted:
-   ```
-   Paste the authorization code here: 1a2b3c4d5e6f7g8h9i0j
-   ```
-3. The script will exchange this code for access and refresh tokens
-
-### 6. Save Tokens to .env
-
-When asked to save the tokens to your .env file, enter "yes":
-
-```
-Do you want to save these tokens to your .env file? (yes/no): yes
-✅ Tokens successfully saved to .env file.
-```
-
-Your `.env` file will now contain all required credentials:
-
-```
-STRAVA_CLIENT_ID=your_client_id
-STRAVA_CLIENT_SECRET=your_client_secret
-STRAVA_ACCESS_TOKEN=your_generated_access_token
-STRAVA_REFRESH_TOKEN=your_generated_refresh_token
-```
-
-### 7. Build and Start the Server
-
-Now that authentication is set up, build and start the server:
-
-```bash
-npm run build
-npm start
-```
-
-You should see:
-```
-Starting Strava MCP Server...
-Strava MCP Server connected via Stdio. Tools registered.
-```
-
-With these steps completed, your MCP server is ready to provide Strava data to compatible LLM clients, with automatic token refresh handling. 
