@@ -124,7 +124,7 @@ const SummaryGearSchema = z.object({
     primary: z.boolean(),
     name: z.string(),
     distance: z.number(), // Distance in meters for the gear
-}).nullable(); // Activity might not have gear
+}).nullable().optional(); // Activity might not have gear or it might be null
 
 // --- Map Schema ---
 const MapSchema = z.object({
@@ -1033,4 +1033,4 @@ export async function exportRouteTcx(accessToken: string, routeId: number): Prom
             return exportRouteTcx(newToken, routeId);
         });
     }
-} 
+}
