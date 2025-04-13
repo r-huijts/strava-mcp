@@ -2,6 +2,100 @@
 
 This project implements a Model Context Protocol (MCP) server in TypeScript that acts as a bridge to the Strava API. It exposes Strava data and functionalities as "tools" that Large Language Models (LLMs) can utilize through the MCP standard.
 
+## ⚠️ Important Setup Sequence
+
+For successful integration with Claude, follow these steps in exact order:
+
+1. Install the server and its dependencies
+2. Configure the server in Claude's configuration
+3. Complete the Strava authentication flow
+4. Restart Claude to ensure proper environment variable loading
+
+Skipping steps or performing them out of order may result in environment variables not being properly read by Claude.
+
+## Installation & Setup
+
+1. **Prerequisites:**
+   - Node.js (v18 or later recommended)
+   - npm (usually comes with Node.js)
+   - A Strava Account
+
+### 1. From Source
+
+1. **Clone Repository:**
+   ```bash
+   git clone https://github.com/r-huijts/strava-mcp.git
+   cd strava-mcp
+   ```
+
+2. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Build the Project:**
+   ```bash
+   npm run build
+   ```
+
+### 2. Configure Claude Desktop
+
+Update your Claude configuration file:
+
+```json
+{
+  "mcpServers": {
+    "strava-mcp-local": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/your/strava-mcp/dist/server.js"
+      ]
+      // Environment variables are read from the .env file by the server
+    }
+  }
+}
+```
+
+Make sure to replace `/absolute/path/to/your/strava-mcp/` with the actual path to your installation.
+
+### 3. Strava Authentication Setup
+
+The `setup-auth.ts` script makes it easy to set up authentication with the Strava API. Follow these steps carefully:
+
+#### Create a Strava API Application
+
+1. Go to [https://www.strava.com/settings/api](https://www.strava.com/settings/api)
+2. Create a new application:
+   - Enter your application details (name, website, description)
+   - Important: Set "Authorization Callback Domain" to `localhost`
+   - Note down your Client ID and Client Secret
+
+#### Run the Setup Script
+
+```bash
+# In your strava-mcp directory
+npx tsx scripts/setup-auth.ts
+```
+
+Follow the prompts to complete the authentication flow (detailed instructions in the Authentication section below).
+
+### 4. Restart Claude
+
+After completing all the above steps, restart Claude Desktop for the changes to take effect. This ensures that:
+- The new configuration is loaded
+- The environment variables are properly read
+- The Strava MCP server is properly initialized
+
+## Features
+
+- 🏃 Access recent activities, profile, and stats.
+- 📊 Fetch detailed activity streams (power, heart rate, cadence, etc.).
+- 🗺️ Explore, view, star, and manage segments.
+- ⏱️ View detailed activity and segment effort information.
+- 📍 List and view details of saved routes.
+- 💾 Export routes in GPX or TCX format to the local filesystem.
+- 🤖 AI-friendly JSON responses via MCP.
+- 🔧 Uses Strava API V3.
+
 ## Natural Language Interaction Examples
 
 Ask your AI assistant questions like these to interact with your Strava data:
@@ -72,150 +166,6 @@ Goal: Deliver a professional-grade performance analysis that looks and feels lik
 ```
 
 This prompt creates a personalized analysis of your most recent Strava activity, complete with professional coaching feedback and a custom visualization dashboard.
-
-## Features
-
-- 🏃 Access recent activities, profile, and stats.
-- 📊 Fetch detailed activity streams (power, heart rate, cadence, etc.).
-- 🗺️ Explore, view, star, and manage segments.
-- ⏱️ View detailed activity and segment effort information.
-- 📍 List and view details of saved routes.
-- 💾 Export routes in GPX or TCX format to the local filesystem.
-- 🤖 AI-friendly JSON responses via MCP.
-- 🔧 Uses Strava API V3.
-
-## Installation & Setup
-
-1. **Prerequisites:**
-   - Node.js (v18 or later recommended)
-   - npm (usually comes with Node.js)
-   - A Strava Account
-
-You can integrate this server with Claude Desktop as follows:
-
-### 1. From Source
-
-1. **Clone Repository:**
-   ```bash
-   git clone https://github.com/r-huijts/strava-mcp.git
-   cd strava-mcp
-   ```
-
-2. **Install Dependencies:**
-   ```bash
-   npm install
-   ```
-3. **Build the Project:**
-   ```bash
-   npm run build
-   ```
-   
-4. **Configure Claude Desktop:**
-   Update your Claude configuration file:
-
-   ```json
-   {
-     "mcpServers": {
-       "strava-mcp-local": {
-         "command": "node",
-         "args": [
-           "/absolute/path/to/your/strava-mcp/dist/server.js"
-         ]
-         // Environment variables are read from the .env file by the server
-       }
-     }
-   }
-   ```
-
-   Make sure to replace `/absolute/path/to/your/strava-mcp/` with the actual path to your installation.
-
-After updating the configuration, restart Claude Desktop for the changes to take effect.
-
-## Authentication Script Walkthrough
-
-The `setup-auth.ts` script makes it easy to set up authentication with the Strava API. Here's a detailed walkthrough with screenshots and explanations:
-
-### Create a Strava API Application
-
-Before running the script, go to [https://www.strava.com/settings/api](https://www.strava.com/settings/api) and create a new application:
-
-- Enter your application details (name, website, description)
-- Important: Set "Authorization Callback Domain" to `localhost`
-- Note down your Client ID and Client Secret
-
-### Run the Setup Script
-
-```bash
-# In your strava-mcp directory
-npx tsx scripts/setup-auth.ts
-```
-
-You'll see a welcome message:
-
-```
---- Strava API Token Setup ---
-```
-
-### Enter Client Credentials
-
-If your `.env` file doesn't already contain your Strava API credentials, you'll be prompted to enter them:
-
-```
-Enter your Strava Application Client ID: [your_client_id]
-Enter your Strava Application Client Secret: [your_client_secret]
-```
-
-### Browser Authorization
-
-The script will generate an authorization URL:
-
-```
-Step 1: Authorize Application
-Please visit the following URL in your browser:
-
-https://www.strava.com/oauth/authorize?client_id=12345&response_type=code&redirect_uri=http://localhost&approval_prompt=force&scope=profile:read_all,activity:read_all
-
-After authorizing, Strava will redirect you to http://localhost.
-Copy the 'code' value from the URL in your browser's address bar.
-(e.g., http://localhost/?state=&code=THIS_PART&scope=...)
-```
-
-1. Open this URL in your browser
-2. Log in to Strava if needed
-3. Click "Authorize" on the permission screen
-4. You'll be redirected to `localhost` (which will show a connection error - this is normal)
-5. Look at your browser's address bar to find the authorization code:
-   ```
-   http://localhost/?state=&code=1a2b3c4d5e6f7g8h9i0j&scope=read,activity:read_all,profile:read_all
-   ```
-   The code is the part after `code=` and before `&scope=`
-
-### Complete the OAuth Flow
-
-1. Copy the authorization code from your browser
-2. Return to your terminal and paste the code when prompted:
-   ```
-   Paste the authorization code here: 1a2b3c4d5e6f7g8h9i0j
-   ```
-3. The script will exchange this code for access and refresh tokens
-
-### Save Tokens to .env
-
-When asked to save the tokens to your .env file, enter "yes":
-
-```
-Do you want to save these tokens to your .env file? (yes/no): yes
-✅ Tokens successfully saved to .env file.
-```
-
-Your `.env` file will now contain all required credentials:
-
-```
-STRAVA_CLIENT_ID=your_client_id
-STRAVA_CLIENT_SECRET=your_client_secret
-STRAVA_ACCESS_TOKEN=your_generated_access_token
-STRAVA_REFRESH_TOKEN=your_generated_refresh_token
-```
 
 ## 🔑 Environment Variables
 
