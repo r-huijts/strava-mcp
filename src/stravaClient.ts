@@ -1072,11 +1072,28 @@ const StravaLapsResponseSchema = z.array(LapSchema);
  * @returns A promise resolving to an array of lap objects.
  */
 export async function getActivityLaps(accessToken: string, activityId: number | string): Promise<StravaLap[]> {
-    return handleApiError(null, `getActivityLaps(${activityId})`, async () => {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+
+    try {
         const response = await stravaApi.get(`/activities/${activityId}/laps`, {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
-        // console.error(`[DEBUG stravaClient] Laps Response for ${activityId}:`, JSON.stringify(response.data, null, 2));
-        return StravaLapsResponseSchema.parse(response.data);
-    });
+        
+        const validationResult = StravaLapsResponseSchema.safeParse(response.data);
+        
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (getActivityLaps: ${activityId}):`, validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+        
+        return validationResult.data;
+    } catch (error) {
+        return await handleApiError<StravaLap[]>(error, `getActivityLaps(${activityId})`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getActivityLaps(newToken, activityId);
+        });
+    }
 }
