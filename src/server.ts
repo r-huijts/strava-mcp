@@ -21,6 +21,14 @@ import { getRouteTool } from './tools/getRoute.js';
 import { exportRouteGpx } from './tools/exportRouteGpx.js';
 import { exportRouteTcx } from './tools/exportRouteTcx.js';
 import { getActivityStreamsTool } from './tools/getActivityStreams.js';
+import { getActivityLapsTool } from './tools/getActivityLaps.js';
+
+// Import the actual client function
+// import {
+//     // exportRouteGpx as exportRouteGpxClient, // Removed unused alias
+//     // exportRouteTcx as exportRouteTcxClient, // Removed unused alias
+//     getActivityLaps as getActivityLapsClient
+// } from './stravaClient.js';
 
 // Load .env file explicitly from project root
 const __filename = fileURLToPath(import.meta.url);
@@ -134,10 +142,17 @@ server.tool(
     getActivityStreamsTool.execute
 );
 
-// --- Helper Functions (Exported, if needed across tools) ---
-// Keep helper functions minimal here or move to a utils file
-// ... (keep formatDuration if potentially used elsewhere, otherwise move to its tool)
+// --- Register get-activity-laps tool (Simplified) ---
+server.tool(
+    getActivityLapsTool.name, 
+    getActivityLapsTool.description,
+    getActivityLapsTool.inputSchema?.shape ?? {},
+    getActivityLapsTool.execute
+);
 
+// --- Helper Functions ---
+// Moving formatDuration to utils or keeping it here if broadly used.
+// For now, it's imported by getActivityLaps.ts
 export function formatDuration(seconds: number): string {
     if (isNaN(seconds) || seconds < 0) {
         return 'N/A';
