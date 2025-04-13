@@ -579,6 +579,82 @@ Retrieves detailed time-series data streams from a Strava activity, perfect for 
 
 ---
 
+### `get-activity-laps`
+
+Retrieves the laps recorded for a specific Strava activity.
+
+- **When to use:**
+  - Analyze performance variations across different segments (laps) of an activity.
+  - Compare lap times, speeds, heart rates, or power outputs.
+  - Understand how an activity was structured (e.g., interval training).
+
+- **Parameters:**
+  - `id` (required):
+    - Type: `number | string`
+    - Description: The unique identifier of the Strava activity.
+
+- **Output Format:**
+  A text summary detailing each lap, including:
+  - Lap Index
+  - Lap Name (if available)
+  - Elapsed Time (formatted as HH:MM:SS)
+  - Moving Time (formatted as HH:MM:SS)
+  - Distance (in km)
+  - Average Speed (in km/h)
+  - Max Speed (in km/h)
+  - Total Elevation Gain (in meters)
+  - Average Heart Rate (if available, in bpm)
+  - Max Heart Rate (if available, in bpm)
+  - Average Cadence (if available, in rpm)
+  - Average Watts (if available, in W)
+
+- **Example Request:**
+  ```json
+  {
+    "id": 1234567890
+  }
+  ```
+
+- **Example Response Snippet:**
+  ```text
+  Activity Laps Summary (ID: 1234567890):
+
+  Lap 1: Warmup Lap
+    Time: 15:02 (Moving: 14:35)
+    Distance: 5.01 km
+    Avg Speed: 20.82 km/h
+    Max Speed: 35.50 km/h
+    Elevation Gain: 50.2 m
+    Avg HR: 135.5 bpm
+    Max HR: 150 bpm
+    Avg Cadence: 85.0 rpm
+
+  Lap 2: Interval 1
+    Time: 05:15 (Moving: 05:10)
+    Distance: 2.50 km
+    Avg Speed: 29.03 km/h
+    Max Speed: 42.10 km/h
+    Elevation Gain: 10.1 m
+    Avg HR: 168.2 bpm
+    Max HR: 175 bpm
+    Avg Cadence: 92.1 rpm
+    Avg Power: 280.5 W (Sensor)
+
+  ...
+  ```
+
+- **Notes:**
+  - Requires `activity:read` scope for public/followers activities, `activity:read_all` for private activities.
+  - Lap data availability depends on the recording device and activity type (e.g., manual activities may not have laps).
+
+- **Errors:**
+  - Missing/invalid token
+  - Invalid activity ID
+  - Insufficient permissions
+  - Activity not found
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
