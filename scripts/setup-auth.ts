@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 // Define required scopes for all current and planned tools
 // Explicitly request profile and activity read access.
-const REQUIRED_SCOPES = 'profile:read_all,activity:read_all';
+const REQUIRED_SCOPES = 'profile:read_all,activity:read_all,activity:read';
 const REDIRECT_URI = 'http://localhost'; // Must match one configured in Strava App settings
 
 const __filename = fileURLToPath(import.meta.url);

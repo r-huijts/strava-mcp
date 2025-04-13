@@ -5,23 +5,23 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Import all tool definitions with the correct names
-import { getRecentActivities } from './tools/getRecentActivities.js'; // Original name
-import { getAthleteProfile } from './tools/getAthleteProfile.js'; // Original name
+import { getAthleteProfile } from './tools/getAthleteProfile.js';
 import { getAthleteStatsTool } from "./tools/getAthleteStats.js";
 import { getActivityDetailsTool } from "./tools/getActivityDetails.js";
-import { listAthleteClubs } from './tools/listAthleteClubs.js'; // Original name
-import { listStarredSegments } from './tools/listStarredSegments.js'; // Original name
+import { getRecentActivities } from "./tools/getRecentActivities.js";
+import { listAthleteClubs } from './tools/listAthleteClubs.js';
+import { listStarredSegments } from './tools/listStarredSegments.js';
 import { getSegmentTool } from "./tools/getSegment.js";
-import { exploreSegments } from './tools/exploreSegments.js'; // Original name
-import { starSegment } from './tools/starSegment.js'; // Original name
+import { exploreSegments } from './tools/exploreSegments.js';
+import { starSegment } from './tools/starSegment.js';
 import { getSegmentEffortTool } from './tools/getSegmentEffort.js';
 import { listSegmentEffortsTool } from './tools/listSegmentEfforts.js';
 import { listAthleteRoutesTool } from './tools/listAthleteRoutes.js';
 import { getRouteTool } from './tools/getRoute.js';
-import { exportRouteGpx } from './tools/exportRouteGpx.js'; // Original name
-import { exportRouteTcx } from './tools/exportRouteTcx.js'; // Original name
+import { exportRouteGpx } from './tools/exportRouteGpx.js';
+import { exportRouteTcx } from './tools/exportRouteTcx.js';
+import { getActivityStreamsTool } from './tools/getActivityStreams.js';
 
-// --- Environment Variable Loading ---
 // Load .env file explicitly from project root
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,19 +32,11 @@ const envPath = path.join(projectRoot, '.env');
 dotenv.config({ path: envPath });
 
 const server = new McpServer({
-  name: "strava-mcp",
-  version: "0.1.0",
-  description: "Provides access to Strava data via MCP.",
-  // Add more metadata if desired
+  name: "Strava MCP Server",
+  version: "1.0.0"
 });
 
 // Register all tools using server.tool and the correct imported objects
-server.tool(
-    getRecentActivities.name, // Original object
-    getRecentActivities.description,
-    getRecentActivities.inputSchema?.shape ?? {},
-    getRecentActivities.execute
-);
 server.tool(
     getAthleteProfile.name,
     getAthleteProfile.description,
@@ -62,6 +54,12 @@ server.tool(
     getActivityDetailsTool.description,
     getActivityDetailsTool.inputSchema?.shape ?? {},
     getActivityDetailsTool.execute
+);
+server.tool(
+    getRecentActivities.name,
+    getRecentActivities.description,
+    getRecentActivities.inputSchema?.shape ?? {},
+    getRecentActivities.execute
 );
 server.tool(
     listAthleteClubs.name,
@@ -82,13 +80,13 @@ server.tool(
     getSegmentTool.execute
 );
 server.tool(
-    exploreSegments.name, // Original object
+    exploreSegments.name,
     exploreSegments.description,
     exploreSegments.inputSchema?.shape ?? {},
     exploreSegments.execute
 );
 server.tool(
-    starSegment.name, // Original object
+    starSegment.name,
     starSegment.description,
     starSegment.inputSchema?.shape ?? {},
     starSegment.execute
@@ -118,16 +116,22 @@ server.tool(
     getRouteTool.execute
 );
 server.tool(
-    exportRouteGpx.name, // Original object
+    exportRouteGpx.name,
     exportRouteGpx.description,
     exportRouteGpx.inputSchema?.shape ?? {},
     exportRouteGpx.execute
 );
 server.tool(
-    exportRouteTcx.name, // Original object
+    exportRouteTcx.name,
     exportRouteTcx.description,
     exportRouteTcx.inputSchema?.shape ?? {},
     exportRouteTcx.execute
+);
+server.tool(
+    getActivityStreamsTool.name,
+    getActivityStreamsTool.description,
+    getActivityStreamsTool.inputSchema?.shape ?? {},
+    getActivityStreamsTool.execute
 );
 
 // --- Helper Functions (Exported, if needed across tools) ---
