@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 // --- Axios Instance & Interceptor --- 
 // Create an Axios instance to apply interceptors globally for this client
-const stravaApi = axios.create({
+export const stravaApi = axios.create({
     baseURL: 'https://www.strava.com/api/v3'
 });
 

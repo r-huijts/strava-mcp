@@ -12,6 +12,13 @@ Ask your AI assistant questions like these to interact with your Strava data:
 - "Get my Strava profile information."
 - "What's my Strava username?"
 
+**Activity Streams & Data:**
+- "Get the heart rate data for activity 12345."
+- "Show me the power data from my last ride."
+- "What was my cadence profile for activity 987654?"
+- "Get all stream data for activity 112233."
+- "Show me the elevation profile for activity 445566."
+
 **Stats:**
 - "What are my running stats for this year on Strava?"
 - "How far have I cycled in total?"
@@ -69,6 +76,7 @@ This prompt creates a personalized analysis of your most recent Strava activity,
 ## Features
 
 - 🏃 Access recent activities, profile, and stats.
+- 📊 Fetch detailed activity streams (power, heart rate, cadence, etc.).
 - 🗺️ Explore, view, star, and manage segments.
 - ⏱️ View detailed activity and segment effort information.
 - 📍 List and view details of saved routes.
@@ -469,6 +477,105 @@ Exports a specific route in TCX format and saves it locally.
     - Description: The unique identifier of the route.
 - **Output:** Success message indicating the save location, or an error message.
 - **Errors:** Missing/invalid token, Missing/invalid `ROUTE_EXPORT_PATH`, File system errors (permissions, disk space), Invalid `routeId`, Strava API errors.
+
+---
+
+### `get-activity-streams`
+
+Retrieves detailed time-series data streams from a Strava activity, perfect for analyzing workout metrics, visualizing routes, or performing detailed activity analysis.
+
+- **When to use:** When you need detailed time-series data from an activity for:
+  - Analyzing workout intensity through heart rate zones
+  - Calculating power metrics for cycling activities
+  - Visualizing route data using GPS coordinates
+  - Analyzing pace and elevation changes
+  - Detailed segment analysis
+
+- **Parameters:**
+  - `id` (required):
+    - Type: `number | string`
+    - Description: The Strava activity identifier to fetch streams for
+  - `types` (optional):
+    - Type: `array`
+    - Default: `['time', 'distance', 'heartrate', 'cadence', 'watts']`
+    - Available types:
+      - `time`: Time in seconds from start
+      - `distance`: Distance in meters from start
+      - `latlng`: Array of [latitude, longitude] pairs
+      - `altitude`: Elevation in meters
+      - `velocity_smooth`: Smoothed speed in meters/second
+      - `heartrate`: Heart rate in beats per minute
+      - `cadence`: Cadence in revolutions per minute
+      - `watts`: Power output in watts
+      - `temp`: Temperature in Celsius
+      - `moving`: Boolean indicating if moving
+      - `grade_smooth`: Road grade as percentage
+  - `resolution` (optional):
+    - Type: `string`
+    - Values: `'low'` (~100 points), `'medium'` (~1000 points), `'high'` (~10000 points)
+    - Description: Data resolution/density
+  - `series_type` (optional):
+    - Type: `string`
+    - Values: `'time'` or `'distance'`
+    - Default: `'distance'`
+    - Description: Base series type for data point indexing
+  - `page` (optional):
+    - Type: `number`
+    - Default: 1
+    - Description: Page number for paginated results
+  - `points_per_page` (optional):
+    - Type: `number`
+    - Default: 100
+    - Special value: `-1` returns ALL data points split into multiple messages
+    - Description: Number of data points per page
+
+- **Output Format:**
+  1. Metadata:
+     - Available stream types
+     - Total data points
+     - Resolution and series type
+     - Pagination info (current page, total pages)
+  2. Statistics (where applicable):
+     - Heart rate: max, min, average
+     - Power: max, average, normalized power
+     - Speed: max and average in km/h
+  3. Stream Data:
+     - Formatted time-series data for each requested stream
+     - Human-readable formats (e.g., formatted time, km/h for speed)
+     - Consistent numeric precision
+     - Labeled data points
+
+- **Example Request:**
+  ```json
+  {
+    "id": 12345678,
+    "types": ["time", "heartrate", "watts", "velocity_smooth", "cadence"],
+    "resolution": "high",
+    "points_per_page": 100,
+    "page": 1
+  }
+  ```
+
+- **Special Features:**
+  - Smart pagination for large datasets
+  - Complete data retrieval mode (points_per_page = -1)
+  - Rich statistics and metadata
+  - Formatted output for both human and LLM consumption
+  - Automatic unit conversions
+
+- **Notes:**
+  - Requires activity:read scope
+  - Not all streams are available for all activities
+  - Older activities might have limited data
+  - Large activities are automatically paginated
+  - Stream availability depends on recording device and activity type
+
+- **Errors:**
+  - Missing/invalid token
+  - Invalid activity ID
+  - Insufficient permissions
+  - Unavailable stream types
+  - Invalid pagination parameters
 
 ---
 
