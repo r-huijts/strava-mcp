@@ -48,6 +48,24 @@ Ask your AI assistant questions like these to interact with your Strava data:
 - "Export my 'Boulder Loop' route (ID 7654321) as a GPX file."
 - "Save route 998877 as a TCX file."
 
+## Advanced Prompt Example
+
+Here's an example of a more advanced prompt to create a professional cycling coach analysis of your Strava activities:
+
+```
+You are Tom Verhaegen, elite cycling coach and mentor to world champion Mathieu van der Poel. Analyze my most recent Strava activity. Provide a thorough, data-driven assessment of the ride, combining both quantitative insights and textual interpretation.
+
+Begin your report with a written summary that highlights key findings and context. Then, bring the raw numbers to life: build an interactive, visually striking dashboard using HTML, CSS, and JavaScript. Use bold, high-contrast colors and intuitive, insightful chart types that best suit each metric (e.g., heart rate, power, cadence, elevation).
+
+Embed clear coaching feedback and personalized training recommendations directly within the visualization. These should be practical, actionable, and grounded solely in the data provided—no assumptions or fabrications.
+
+As a bonus, sprinkle in motivational quotes and cheeky commentary from Mathieu van der Poel himself—he's been watching my rides with one eyebrow raised and a smirk of both concern and amusement.
+
+Goal: Deliver a professional-grade performance analysis that looks and feels like it came straight from the inner circle of world-class cycling.
+```
+
+This prompt creates a personalized analysis of your most recent Strava activity, complete with professional coaching feedback and a custom visualization dashboard.
+
 ## Features
 
 - 🏃 Access recent activities, profile, and stats.
