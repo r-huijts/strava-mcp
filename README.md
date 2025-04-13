@@ -2,6 +2,88 @@
 
 This project implements a Model Context Protocol (MCP) server in TypeScript that acts as a bridge to the Strava API. It exposes Strava data and functionalities as "tools" that Large Language Models (LLMs) can utilize through the MCP standard.
 
+## Features
+
+- 🏃 Access recent activities, profile, and stats.
+- 📊 Fetch detailed activity streams (power, heart rate, cadence, etc.).
+- 🗺️ Explore, view, star, and manage segments.
+- ⏱️ View detailed activity and segment effort information.
+- 📍 List and view details of saved routes.
+- 💾 Export routes in GPX or TCX format to the local filesystem.
+- 🤖 AI-friendly JSON responses via MCP.
+- 🔧 Uses Strava API V3.
+
+## Natural Language Interaction Examples
+
+Ask your AI assistant questions like these to interact with your Strava data:
+
+**Recent Activity & Profile:**
+- "Show me my recent Strava activities."
+- "What were my last 3 rides?"
+- "Get my Strava profile information."
+- "What's my Strava username?"
+
+**Activity Streams & Data:**
+- "Get the heart rate data for activity 12345."
+- "Show me the power data from my last ride."
+- "What was my cadence profile for activity 987654?"
+- "Get all stream data for activity 112233."
+- "Show me the elevation profile for activity 445566."
+
+**Stats:**
+- "What are my running stats for this year on Strava?"
+- "How far have I cycled in total?"
+- "Show me my all-time swim totals."
+
+**Specific Activities:**
+- "Give me the details for my last run (activity ID 12345)."
+- "What was the average power for activity 987654321?"
+- "Did I use my Trek bike for activity 11223344?"
+
+**Clubs:**
+- "What Strava clubs am I in?"
+- "List the clubs I've joined."
+
+**Segments:**
+- "List the segments I starred near Boulder, Colorado."
+- "Show my favorite segments."
+- "Get details for the 'Alpe du Zwift' segment (ID 123456)."
+- "Are there any good running segments near Golden Gate Park? Use bounds 37.76,-122.51,37.78,-122.45."
+- "Find Cat 1 or HC climbs near coordinates 39.9,-105.3,40.1,-105.1."
+- "Star the 'Flagstaff Road Climb' segment (ID 654321) for me."
+- "Unstar segment 112233."
+
+**Segment Efforts:**
+- "Show my efforts on the 'Sunshine Canyon' segment (ID 987654) this month."
+- "List my attempts on segment 123123 between 2023-01-01 and 2023-06-30."
+- "Get the details for my PR effort (effort ID 555666777)."
+
+**Routes:**
+- "List my saved Strava routes."
+- "Show the second page of my routes."
+- "What is the elevation gain for route 112233?"
+- "Get the description for my 'Boulder Loop' route (ID 7654321)."
+- "Export my 'Boulder Loop' route (ID 7654321) as a GPX file."
+- "Save route 998877 as a TCX file."
+
+## Advanced Prompt Example
+
+Here's an example of a more advanced prompt to create a professional cycling coach analysis of your Strava activities:
+
+```
+You are Tom Verhaegen, elite cycling coach and mentor to world champion Mathieu van der Poel. Analyze my most recent Strava activity. Provide a thorough, data-driven assessment of the ride, combining both quantitative insights and textual interpretation.
+
+Begin your report with a written summary that highlights key findings and context. Then, bring the raw numbers to life: build an interactive, visually striking dashboard using HTML, CSS, and JavaScript. Use bold, high-contrast colors and intuitive, insightful chart types that best suit each metric (e.g., heart rate, power, cadence, elevation).
+
+Embed clear coaching feedback and personalized training recommendations directly within the visualization. These should be practical, actionable, and grounded solely in the data provided—no assumptions or fabrications.
+
+As a bonus, sprinkle in motivational quotes and cheeky commentary from Mathieu van der Poel himself—he's been watching my rides with one eyebrow raised and a smirk of both concern and amusement.
+
+Goal: Deliver a professional-grade performance analysis that looks and feels like it came straight from the inner circle of world-class cycling.
+```
+
+This prompt creates a personalized analysis of your most recent Strava activity, complete with professional coaching feedback and a custom visualization dashboard.
+
 ## ⚠️ Important Setup Sequence
 
 For successful integration with Claude, follow these steps in exact order:
@@ -84,88 +166,6 @@ After completing all the above steps, restart Claude Desktop for the changes to 
 - The new configuration is loaded
 - The environment variables are properly read
 - The Strava MCP server is properly initialized
-
-## Features
-
-- 🏃 Access recent activities, profile, and stats.
-- 📊 Fetch detailed activity streams (power, heart rate, cadence, etc.).
-- 🗺️ Explore, view, star, and manage segments.
-- ⏱️ View detailed activity and segment effort information.
-- 📍 List and view details of saved routes.
-- 💾 Export routes in GPX or TCX format to the local filesystem.
-- 🤖 AI-friendly JSON responses via MCP.
-- 🔧 Uses Strava API V3.
-
-## Natural Language Interaction Examples
-
-Ask your AI assistant questions like these to interact with your Strava data:
-
-**Recent Activity & Profile:**
-- "Show me my recent Strava activities."
-- "What were my last 3 rides?"
-- "Get my Strava profile information."
-- "What's my Strava username?"
-
-**Activity Streams & Data:**
-- "Get the heart rate data for activity 12345."
-- "Show me the power data from my last ride."
-- "What was my cadence profile for activity 987654?"
-- "Get all stream data for activity 112233."
-- "Show me the elevation profile for activity 445566."
-
-**Stats:**
-- "What are my running stats for this year on Strava?"
-- "How far have I cycled in total?"
-- "Show me my all-time swim totals."
-
-**Specific Activities:**
-- "Give me the details for my last run (activity ID 12345)."
-- "What was the average power for activity 987654321?"
-- "Did I use my Trek bike for activity 11223344?"
-
-**Clubs:**
-- "What Strava clubs am I in?"
-- "List the clubs I've joined."
-
-**Segments:**
-- "List the segments I starred near Boulder, Colorado."
-- "Show my favorite segments."
-- "Get details for the 'Alpe du Zwift' segment (ID 123456)."
-- "Are there any good running segments near Golden Gate Park? Use bounds 37.76,-122.51,37.78,-122.45."
-- "Find Cat 1 or HC climbs near coordinates 39.9,-105.3,40.1,-105.1."
-- "Star the 'Flagstaff Road Climb' segment (ID 654321) for me."
-- "Unstar segment 112233."
-
-**Segment Efforts:**
-- "Show my efforts on the 'Sunshine Canyon' segment (ID 987654) this month."
-- "List my attempts on segment 123123 between 2023-01-01 and 2023-06-30."
-- "Get the details for my PR effort (effort ID 555666777)."
-
-**Routes:**
-- "List my saved Strava routes."
-- "Show the second page of my routes."
-- "What is the elevation gain for route 112233?"
-- "Get the description for my 'Boulder Loop' route (ID 7654321)."
-- "Export my 'Boulder Loop' route (ID 7654321) as a GPX file."
-- "Save route 998877 as a TCX file."
-
-## Advanced Prompt Example
-
-Here's an example of a more advanced prompt to create a professional cycling coach analysis of your Strava activities:
-
-```
-You are Tom Verhaegen, elite cycling coach and mentor to world champion Mathieu van der Poel. Analyze my most recent Strava activity. Provide a thorough, data-driven assessment of the ride, combining both quantitative insights and textual interpretation.
-
-Begin your report with a written summary that highlights key findings and context. Then, bring the raw numbers to life: build an interactive, visually striking dashboard using HTML, CSS, and JavaScript. Use bold, high-contrast colors and intuitive, insightful chart types that best suit each metric (e.g., heart rate, power, cadence, elevation).
-
-Embed clear coaching feedback and personalized training recommendations directly within the visualization. These should be practical, actionable, and grounded solely in the data provided—no assumptions or fabrications.
-
-As a bonus, sprinkle in motivational quotes and cheeky commentary from Mathieu van der Poel himself—he's been watching my rides with one eyebrow raised and a smirk of both concern and amusement.
-
-Goal: Deliver a professional-grade performance analysis that looks and feels like it came straight from the inner circle of world-class cycling.
-```
-
-This prompt creates a personalized analysis of your most recent Strava activity, complete with professional coaching feedback and a custom visualization dashboard.
 
 ## 🔑 Environment Variables
 
