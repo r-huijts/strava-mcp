@@ -18,53 +18,53 @@ This project implements a Model Context Protocol (MCP) server in TypeScript that
 Ask your AI assistant questions like these to interact with your Strava data:
 
 **Recent Activity & Profile:**
-- "Show me my recent Strava activities."
-- "What were my last 3 rides?"
-- "Get my Strava profile information."
-- "What's my Strava username?"
+* "Show me my recent Strava activities."
+* "What were my last 3 rides?"
+* "Get my Strava profile information."
+* "What's my Strava username?"
 
 **Activity Streams & Data:**
-- "Get the heart rate data for activity 12345."
-- "Show me the power data from my last ride."
-- "What was my cadence profile for activity 987654?"
-- "Get all stream data for activity 112233."
-- "Show me the elevation profile for activity 445566."
+* "Get the heart rate data from my morning run yesterday."
+* "Show me the power data from my last ride."
+* "What was my cadence profile for my weekend century ride?"
+* "Get all stream data for my Thursday evening workout."
+* "Show me the elevation profile for my Mt. Diablo climb."
 
 **Stats:**
-- "What are my running stats for this year on Strava?"
-- "How far have I cycled in total?"
-- "Show me my all-time swim totals."
+* "What are my running stats for this year on Strava?"
+* "How far have I cycled in total?"
+* "Show me my all-time swim totals."
 
 **Specific Activities:**
-- "Give me the details for my last run (activity ID 12345)."
-- "What was the average power for activity 987654321?"
-- "Did I use my Trek bike for activity 11223344?"
+* "Give me the details for my last run."
+* "What was the average power for my interval training on Tuesday?"
+* "Did I use my Trek bike for my commute yesterday?"
 
 **Clubs:**
-- "What Strava clubs am I in?"
-- "List the clubs I've joined."
+* "What Strava clubs am I in?"
+* "List the clubs I've joined."
 
 **Segments:**
-- "List the segments I starred near Boulder, Colorado."
-- "Show my favorite segments."
-- "Get details for the 'Alpe du Zwift' segment (ID 123456)."
-- "Are there any good running segments near Golden Gate Park? Use bounds 37.76,-122.51,37.78,-122.45."
-- "Find Cat 1 or HC climbs near coordinates 39.9,-105.3,40.1,-105.1."
-- "Star the 'Flagstaff Road Climb' segment (ID 654321) for me."
-- "Unstar segment 112233."
+* "List the segments I starred near Boulder, Colorado."
+* "Show my favorite segments."
+* "Get details for the 'Alpe du Zwift' segment."
+* "Are there any good running segments near Golden Gate Park?"
+* "Find challenging climbs near Boulders Flagstaff Mountain."
+* "Star the 'Flagstaff Road Climb' segment for me."
+* "Unstar the 'Lefthand Canyon' segment."
 
 **Segment Efforts:**
-- "Show my efforts on the 'Sunshine Canyon' segment (ID 987654) this month."
-- "List my attempts on segment 123123 between 2023-01-01 and 2023-06-30."
-- "Get the details for my PR effort (effort ID 555666777)."
+* "Show my efforts on the 'Sunshine Canyon' segment this month."
+* "List my attempts on Box Hill between January and June this year."
+* "Get the details for my personal record on Alpe d'Huez."
 
 **Routes:**
-- "List my saved Strava routes."
-- "Show the second page of my routes."
-- "What is the elevation gain for route 112233?"
-- "Get the description for my 'Boulder Loop' route (ID 7654321)."
-- "Export my 'Boulder Loop' route (ID 7654321) as a GPX file."
-- "Save route 998877 as a TCX file."
+* "List my saved Strava routes."
+* "Show the second page of my routes."
+* "What is the elevation gain for my Boulder Loop route?"
+* "Get the description for my 'Boulder Loop' route."
+* "Export my 'Boulder Loop' route as a GPX file."
+* "Save my Sunday morning route as a TCX file."
 
 ## Advanced Prompt Example
 
