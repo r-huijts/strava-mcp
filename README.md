@@ -612,15 +612,12 @@ Retrieves the authenticated athlete's configured heart rate and power zones.
 - **When to use:** When the user asks about their heart rate zones, power zones, or training zone settings.
 - **Parameters:** None
 - **Output Format:**
-  A text summary detailing configured zones:
-  - Heart Rate Zones:
-    - Custom Zones (Yes/No)
-    - Zone ranges (e.g., Zone 1: 0 - 120 bpm)
-    - Time Distribution (if available, e.g., 0-50: 1498s)
-  - Power Zones:
-    - Zone ranges (e.g., Zone 1: 0 - 150 W)
-    - Time Distribution (if available, e.g., 0-50: 1498s)
-- **Example Response Snippet:**
+  Returns two text blocks:
+  1.  A **formatted summary** detailing configured zones:
+      - Heart Rate Zones: Custom status, Zone ranges, Time Distribution (if available)
+      - Power Zones: Zone ranges, Time Distribution (if available)
+  2.  The **complete raw JSON data** as returned by the Strava API.
+- **Example Response Snippet (Summary):**
   ```text
   **Athlete Zones:**
 
