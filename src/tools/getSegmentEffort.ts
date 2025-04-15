@@ -87,10 +87,16 @@ export const getSegmentEffortTool = {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(`Error fetching segment effort ${effortId}: ${errorMessage}`);
-            // Removed call to handleApiError
-            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
-                ? `Segment effort with ID ${effortId} not found.`
-                : `An unexpected error occurred while fetching segment effort ${effortId}. Details: ${errorMessage}`;
+
+            let userFriendlyMessage;
+            if (errorMessage.startsWith("SUBSCRIPTION_REQUIRED:")) {
+                userFriendlyMessage = `🔒 Accessing this segment effort (ID: ${effortId}) requires a Strava subscription. Please check your subscription status.`;
+            } else if (errorMessage.includes("Record Not Found") || errorMessage.includes("404")) {
+                userFriendlyMessage = `Segment effort with ID ${effortId} not found.`;
+            } else {
+                userFriendlyMessage = `An unexpected error occurred while fetching segment effort ${effortId}. Details: ${errorMessage}`;
+            }
+
             return {
                 content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
                 isError: true

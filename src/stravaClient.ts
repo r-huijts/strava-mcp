@@ -422,6 +422,13 @@ export async function handleApiError<T>(error: unknown, context: string, retryFn
             // Fall through to normal error handling if refresh fails
         }
     }
+
+    // Check for subscription error (402)
+    if (axios.isAxiosError(error) && error.response?.status === 402) {
+        console.error(`🔒 Subscription Required in ${context}. Status: 402`);
+        // Throw a specific error type or use a unique message
+        throw new Error(`SUBSCRIPTION_REQUIRED: Access to this feature requires a Strava subscription. Context: ${context}`);
+    }
     
     // Standard error handling (existing code)
     if (axios.isAxiosError(error)) {

@@ -90,11 +90,16 @@ export const listSegmentEffortsTool = {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(`Error listing efforts for segment ${segmentId}: ${errorMessage}`);
-            // Removed call to handleApiError
-            // Note: 404 is less likely for a list endpoint, but we still check
-            const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
-                ? `Segment with ID ${segmentId} not found (when listing efforts).`
-                : `An unexpected error occurred while listing efforts for segment ${segmentId}. Details: ${errorMessage}`;
+
+            let userFriendlyMessage;
+            if (errorMessage.startsWith("SUBSCRIPTION_REQUIRED:")) {
+                userFriendlyMessage = `🔒 Accessing segment efforts requires a Strava subscription. Please check your subscription status.`;
+            } else if (errorMessage.includes("Record Not Found") || errorMessage.includes("404")) {
+                userFriendlyMessage = `Segment with ID ${segmentId} not found (when listing efforts).`;
+            } else {
+                userFriendlyMessage = `An unexpected error occurred while listing efforts for segment ${segmentId}. Details: ${errorMessage}`;
+            }
+
             return {
                 content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
                 isError: true
