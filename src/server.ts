@@ -22,6 +22,7 @@ import { exportRouteGpx } from './tools/exportRouteGpx.js';
 import { exportRouteTcx } from './tools/exportRouteTcx.js';
 import { getActivityStreamsTool } from './tools/getActivityStreams.js';
 import { getActivityLapsTool } from './tools/getActivityLaps.js';
+import { getAthleteZonesTool } from './tools/getAthleteZones.js';
 
 // Import the actual client function
 // import {
@@ -148,6 +149,14 @@ server.tool(
     getActivityLapsTool.description,
     getActivityLapsTool.inputSchema?.shape ?? {},
     getActivityLapsTool.execute
+);
+
+// --- Register get-athlete-zones tool ---
+server.tool(
+    getAthleteZonesTool.name, 
+    getAthleteZonesTool.description,
+    getAthleteZonesTool.inputSchema?.shape ?? {},
+    getAthleteZonesTool.execute
 );
 
 // --- Helper Functions ---

@@ -1104,3 +1104,76 @@ export async function getActivityLaps(accessToken: string, activityId: number | 
         });
     }
 }
+
+// --- Zone Schemas ---
+const DistributionBucketSchema = z.object({
+    max: z.number(),
+    min: z.number(),
+    time: z.number().int(), // Time in seconds spent in this bucket
+});
+
+const ZoneSchema = z.object({
+    min: z.number(),
+    max: z.number().optional(), // Max might be absent for the last zone
+});
+
+const HeartRateZoneSchema = z.object({
+    custom_zones: z.boolean(),
+    zones: z.array(ZoneSchema),
+    distribution_buckets: z.array(DistributionBucketSchema).optional(), // Optional based on sample
+    resource_state: z.number().int().optional(), // Optional based on sample
+    sensor_based: z.boolean().optional(), // Optional based on sample
+    points: z.number().int().optional(), // Optional based on sample
+    type: z.literal('heartrate').optional(), // Optional based on sample
+});
+
+const PowerZoneSchema = z.object({
+    zones: z.array(ZoneSchema),
+    distribution_buckets: z.array(DistributionBucketSchema).optional(), // Optional based on sample
+    resource_state: z.number().int().optional(), // Optional based on sample
+    sensor_based: z.boolean().optional(), // Optional based on sample
+    points: z.number().int().optional(), // Optional based on sample
+    type: z.literal('power').optional(), // Optional based on sample
+});
+
+// Combined Zones Response Schema
+const AthleteZonesSchema = z.object({
+    heart_rate: HeartRateZoneSchema.optional(), // Heart rate zones might not be set
+    power: PowerZoneSchema.optional(), // Power zones might not be set
+});
+
+export type StravaAthleteZones = z.infer<typeof AthleteZonesSchema>;
+
+/**
+ * Retrieves the heart rate and power zones for the authenticated athlete.
+ * @param accessToken The Strava API access token.
+ * @returns A promise resolving to the athlete's zone data.
+ */
+export async function getAthleteZones(accessToken: string): Promise<StravaAthleteZones> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+
+    try {
+        const response = await stravaApi.get<unknown>("/athlete/zones", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        
+        const validationResult = AthleteZonesSchema.safeParse(response.data);
+        
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (getAthleteZones):`, validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+        
+        return validationResult.data;
+    } catch (error) {
+        // Note: This endpoint requires profile:read_all scope
+        // Handle potential 403 Forbidden if scope is missing, or 402 if it becomes sub-only?
+        return await handleApiError<StravaAthleteZones>(error, `getAthleteZones`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getAthleteZones(newToken);
+        });
+    }
+}

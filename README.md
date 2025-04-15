@@ -605,6 +605,57 @@ Retrieves the laps recorded for a specific Strava activity.
 
 ---
 
+### `get-athlete-zones`
+
+Retrieves the authenticated athlete's configured heart rate and power zones.
+
+- **When to use:** When the user asks about their heart rate zones, power zones, or training zone settings.
+- **Parameters:** None
+- **Output Format:**
+  A text summary detailing configured zones:
+  - Heart Rate Zones:
+    - Custom Zones (Yes/No)
+    - Zone ranges (e.g., Zone 1: 0 - 120 bpm)
+    - Time Distribution (if available, e.g., 0-50: 1498s)
+  - Power Zones:
+    - Zone ranges (e.g., Zone 1: 0 - 150 W)
+    - Time Distribution (if available, e.g., 0-50: 1498s)
+- **Example Response Snippet:**
+  ```text
+  **Athlete Zones:**
+
+  ❤️ **Heart Rate Zones**
+     Custom Zones: No
+     Zone 1: 0 - 115 bpm
+     Zone 2: 115 - 145 bpm
+     Zone 3: 145 - 165 bpm
+     Zone 4: 165 - 180 bpm
+     Zone 5: 180+ bpm
+
+  ⚡ **Power Zones**
+     Zone 1: 0 - 150 W
+     Zone 2: 151 - 210 W
+     Zone 3: 211 - 250 W
+     Zone 4: 251 - 300 W
+     Zone 5: 301 - 350 W
+     Zone 6: 351 - 420 W
+     Zone 7: 421+ W
+     Time Distribution:
+       - 0-50: 0:24:58
+       - 50-100: 0:01:02
+       ...
+       - 450-∞: 0:05:43
+  ```
+- **Notes:**
+  - Requires `profile:read_all` scope.
+  - Zones might not be configured for all athletes.
+- **Errors:**
+  - Missing/invalid token
+  - Insufficient permissions (Missing `profile:read_all` scope - 403 error)
+  - Subscription Required (Potentially, if Strava changes API access)
+
+---
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
