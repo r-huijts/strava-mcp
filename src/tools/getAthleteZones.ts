@@ -58,7 +58,7 @@ function formatAthleteZones(zonesData: StravaAthleteZones): string {
 
 export const getAthleteZonesTool = {
     name,
-    description,
+    description: description + "\n\nOutput includes both a formatted summary and the raw JSON data.",
     inputSchema,
     execute: async (_input: GetAthleteZonesInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
@@ -74,10 +74,21 @@ export const getAthleteZonesTool = {
         try {
             console.error("Fetching athlete zones...");
             const zonesData = await fetchAthleteZones(token);
+            
+            // Format the summary
             const formattedText = formatAthleteZones(zonesData);
             
+            // Prepare the raw data
+            const rawDataText = `\n\nRaw Athlete Zone Data:\n${JSON.stringify(zonesData, null, 2)}`;
+            
             console.error("Successfully fetched athlete zones.");
-            return { content: [{ type: "text" as const, text: formattedText }] };
+            // Return both summary and raw data
+            return { 
+                content: [
+                    { type: "text" as const, text: formattedText },
+                    { type: "text" as const, text: rawDataText }
+                ]
+            };
 
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
