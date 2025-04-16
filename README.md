@@ -2,6 +2,10 @@
 
 This project implements a Model Context Protocol (MCP) server in TypeScript that acts as a bridge to the Strava API. It exposes Strava data and functionalities as "tools" that Large Language Models (LLMs) can utilize through the MCP standard.
 
+<a href="https://glama.ai/mcp/servers/@r-huijts/strava-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@r-huijts/strava-mcp/badge" alt="Strava Server MCP server" />
+</a>
+
 ## Features
 
 - 🏃 Access recent activities, profile, and stats.
