@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/r-huijts-strava-mcp-badge.png)](https://mseep.ai/app/r-huijts-strava-mcp)
+
 # Strava MCP Server
 
 This project implements a Model Context Protocol (MCP) server in TypeScript that acts as a bridge to the Strava API. It exposes Strava data and functionalities as "tools" that Large Language Models (LLMs) can utilize through the MCP standard.
