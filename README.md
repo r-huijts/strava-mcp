@@ -332,6 +332,9 @@ Stars or unstars a specific segment for the authenticated athlete.
 - **Output:** Success message confirming the action and the segment's new starred status.
 - **Errors:** Missing/invalid token, Invalid `segmentId`, Strava API errors (e.g., segment not found, rate limit).
 
+- **Notes:**
+  - Requires `profile:write` scope for star-ing and unstar-ing segments
+
 ---
 
 ### `get-segment-effort`
