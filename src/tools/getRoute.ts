@@ -4,8 +4,10 @@ import { formatRouteSummary } from "../formatters.js"; // Import shared formatte
 
 // Zod schema for input validation
 const GetRouteInputSchema = z.object({
-    routeId: z.number().int().positive({ message: "Route ID must be a positive integer." }).describe("The unique identifier of the route to fetch.")
-});
+    routeId: z.string()
+        .regex(/^\d+$/, "Route ID must contain only digits")
+        .refine(val => val.length > 0, "Route ID cannot be empty")
+        .describe("The unique identifier of the route to fetch.")});
 
 type GetRouteInput = z.infer<typeof GetRouteInputSchema>;
 
