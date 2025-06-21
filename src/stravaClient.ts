@@ -966,7 +966,7 @@ export async function listAthleteRoutes(accessToken: string, page = 1, perPage =
  * @returns A promise that resolves to the detailed route data.
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
-export async function getRouteById(accessToken: string, routeId: number): Promise<StravaRoute> {
+export async function getRouteById(accessToken: string, routeId: string): Promise<StravaRoute> {
     const url = `routes/${routeId}`;
     try {
         const response = await stravaApi.get(url, {
