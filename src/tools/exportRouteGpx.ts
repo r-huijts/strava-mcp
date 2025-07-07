@@ -7,7 +7,7 @@ import { exportRouteGpx as fetchGpxData } from "../stravaClient.js";
 
 // Define the input schema for the tool
 const ExportRouteGpxInputSchema = z.object({
-    routeId: z.number().int().positive().describe("The ID of the Strava route to export."),
+    routeId: z.string().describe("The ID of the Strava route to export."),
 });
 
 // Infer the input type from the schema

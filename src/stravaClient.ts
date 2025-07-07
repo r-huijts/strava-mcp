@@ -991,7 +991,7 @@ export async function getRouteById(accessToken: string, routeId: string): Promis
  * @param routeId The ID of the route to export
  * @returns Promise resolving to the GPX data as a string
  */
-export async function exportRouteGpx(accessToken: string, routeId: number): Promise<string> {
+export async function exportRouteGpx(accessToken: string, routeId: string): Promise<string> {
     const url = `routes/${routeId}/export_gpx`;
     try {
         // Expecting text/xml response, Axios should handle it as string
@@ -1020,7 +1020,7 @@ export async function exportRouteGpx(accessToken: string, routeId: number): Prom
  * @param routeId The ID of the route to export
  * @returns Promise resolving to the TCX data as a string
  */
-export async function exportRouteTcx(accessToken: string, routeId: number): Promise<string> {
+export async function exportRouteTcx(accessToken: string, routeId: string): Promise<string> {
     const url = `routes/${routeId}/export_tcx`;
     try {
         // Expecting text/xml response, Axios should handle it as string
