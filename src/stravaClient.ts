@@ -490,6 +490,95 @@ export async function getRecentActivities(accessToken: string, perPage = 30): Pr
 }
 
 /**
+ * Fetches all activities for the authenticated athlete with pagination and date filtering.
+ * Automatically handles multiple pages to retrieve complete activity history.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param params - Parameters for filtering and pagination.
+ * @returns A promise that resolves to an array of all matching Strava activities.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
+ */
+export async function getAllActivities(
+    accessToken: string, 
+    params: GetAllActivitiesParams = {}
+): Promise<any[]> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+
+    const { 
+        page = 1, 
+        perPage = 200, // Max allowed by Strava
+        before,
+        after,
+        onProgress
+    } = params;
+
+    const allActivities: any[] = [];
+    let currentPage = page;
+    let hasMore = true;
+
+    try {
+        while (hasMore) {
+            // Build query parameters
+            const queryParams: Record<string, any> = {
+                page: currentPage,
+                per_page: perPage
+            };
+            
+            // Add date filters if provided
+            if (before !== undefined) queryParams.before = before;
+            if (after !== undefined) queryParams.after = after;
+
+            // Fetch current page
+            const response = await stravaApi.get<unknown>("athlete/activities", {
+                headers: { Authorization: `Bearer ${accessToken}` },
+                params: queryParams
+            });
+
+            const validationResult = StravaActivitiesResponseSchema.safeParse(response.data);
+
+            if (!validationResult.success) {
+                console.error(`Strava API response validation failed (getAllActivities page ${currentPage}):`, validationResult.error);
+                throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+            }
+
+            const activities = validationResult.data;
+            
+            // Add activities to collection
+            allActivities.push(...activities);
+            
+            // Report progress if callback provided
+            if (onProgress) {
+                onProgress(allActivities.length, currentPage);
+            }
+
+            // Check if we should continue
+            // Stop if we got fewer activities than requested (indicating last page)
+            hasMore = activities.length === perPage;
+            currentPage++;
+
+            // Add a small delay to be respectful of rate limits
+            if (hasMore) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        return allActivities;
+    } catch (error) {
+        // If it's an auth error and we're on first page, try token refresh
+        if (currentPage === 1) {
+            return await handleApiError<any[]>(error, 'getAllActivities', async () => {
+                const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+                return getAllActivities(newToken, params);
+            });
+        }
+        // For subsequent pages, just throw the error
+        throw error;
+    }
+}
+
+/**
  * Fetches profile information for the authenticated athlete.
  *
  * @param accessToken - The Strava API access token.
@@ -915,6 +1004,15 @@ export interface SegmentEffortsParams {
     startDateLocal?: string;
     endDateLocal?: string;
     perPage?: number;
+}
+
+// Interface for getAllActivities parameters
+export interface GetAllActivitiesParams {
+    page?: number;
+    perPage?: number;
+    before?: number; // epoch timestamp in seconds
+    after?: number; // epoch timestamp in seconds
+    onProgress?: (fetched: number, page: number) => void;
 }
 
 /**
