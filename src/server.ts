@@ -23,6 +23,7 @@ import { exportRouteTcx } from './tools/exportRouteTcx.js';
 import { getActivityStreamsTool } from './tools/getActivityStreams.js';
 import { getActivityLapsTool } from './tools/getActivityLaps.js';
 import { getAthleteZonesTool } from './tools/getAthleteZones.js';
+import { getAllActivities } from './tools/getAllActivities.js';
 
 // Import the actual client function
 // import {
@@ -157,6 +158,14 @@ server.tool(
     getAthleteZonesTool.description,
     getAthleteZonesTool.inputSchema?.shape ?? {},
     getAthleteZonesTool.execute
+);
+
+// --- Register get-all-activities tool ---
+server.tool(
+    getAllActivities.name,
+    getAllActivities.description,
+    getAllActivities.inputSchema?.shape ?? {},
+    getAllActivities.execute
 );
 
 // --- Helper Functions ---
