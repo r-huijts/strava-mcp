@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.r-huijts/strava-mcp",
+  "description": "MCP server for accessing Strava API - track workouts, analyze performance data, and integrate fitness metrics into AI workflows",
+  "status": "active",
+  "repository": {
+    "url": "https://github.com/r-huijts/strava-mcp",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registry_type": "npm",
+      "registry_base_url": "https://registry.npmjs.org",
+      "identifier": "strava-mcp-server",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environment_variables": [
+        {
+          "name": "STRAVA_CLIENT_ID",
+          "description": "Your Strava API client ID",
+          "is_required": true,
+          "format": "string"
+        },
+        {
+          "name": "STRAVA_CLIENT_SECRET",
+          "description": "Your Strava API client secret",
+          "is_required": true,
+          "format": "string",
+          "is_secret": true
+        },
+        {
+          "name": "STRAVA_ACCESS_TOKEN",
+          "description": "Your Strava API access token",
+          "is_required": true,
+          "format": "string",
+          "is_secret": true
+        }
+      ]
+    }
+  ]
+}
