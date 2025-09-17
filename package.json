@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "MCP server for Strava API",
   "mcpName": "io.github.r-huijts/strava-mcp",
+  "repository": {
+    "type": "git", 
+    "url": "https://github.com/r-huijts/strava-mcp"
+  },
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
