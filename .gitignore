@@ -24,4 +24,5 @@ yarn-error.log*
 # Cursor IDE files
 .cursor/
 *.mdc
-cursor_rules.json 
+cursor_rules.json .mcpregistry_registry_token
+.mcpregistry_github_token
