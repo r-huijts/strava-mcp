@@ -1140,6 +1140,37 @@ export async function exportRouteTcx(accessToken: string, routeId: string): Prom
     }
 }
 
+// --- Photo Schema ---
+// Based on https://developers.strava.com/docs/reference/#api-models-Photo
+const PhotoSchema = z.object({
+    id: z.number().int().nullable().optional(), // Photo ID (may be null for some sources)
+    unique_id: z.string().nullable().optional(), // Unique identifier
+    urls: z.record(z.string()).optional(), // Maps size names (e.g., "100", "600", "1800") to URLs
+    source: z.number().int().optional(), // 1 = Strava, 2 = Instagram
+    uploaded_at: z.string().optional().nullable(),
+    created_at: z.string().optional().nullable(),
+    created_at_local: z.string().optional().nullable(),
+    location: z.array(z.number()).nullable().optional(), // [lat, lng]
+    caption: z.string().nullable().optional(),
+    activity_id: z.number().int().optional(),
+    activity_name: z.string().optional().nullable(),
+    resource_state: z.number().int().optional(),
+    athlete_id: z.number().int().optional().nullable(),
+    post_id: z.number().int().nullable().optional(),
+    default_photo: z.boolean().optional(),
+    type: z.union([z.string(), z.number()]).optional(), // Can be number (1) or string ("InstagramPhoto")
+    status: z.number().int().optional(), // Processing status
+    placeholder_image: z.object({
+        light_url: z.string().optional(),
+        dark_url: z.string().optional(),
+    }).nullable().optional(),
+    sizes: z.record(z.array(z.number())).optional(), // Maps size names to [width, height]
+    cursor: z.any().nullable().optional(), // Pagination cursor
+});
+
+export type StravaPhoto = z.infer<typeof PhotoSchema>;
+const StravaPhotosResponseSchema = z.array(PhotoSchema);
+
 // --- Lap Schema ---
 // Based on https://developers.strava.com/docs/reference/#api-models-Lap and user-provided image
 const LapSchema = z.object({
@@ -1272,6 +1303,57 @@ export async function getAthleteZones(accessToken: string): Promise<StravaAthlet
             // Use new token from environment after refresh
             const newToken = process.env.STRAVA_ACCESS_TOKEN!;
             return getAthleteZones(newToken);
+        });
+    }
+}
+
+/**
+ * Fetches photos associated with a specific activity.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param activityId - The ID of the activity to fetch photos for.
+ * @param size - Size of photos to return in pixels (default: 2048). Required to get actual URLs instead of placeholders.
+ * @returns A promise that resolves to an array of photos for the activity.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
+ */
+export async function getActivityPhotos(
+    accessToken: string,
+    activityId: number,
+    size: number = 2048
+): Promise<StravaPhoto[]> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+    if (!activityId) {
+        throw new Error("Activity ID is required to fetch photos.");
+    }
+
+    // photo_sources=true is required to get native Strava photos (not just Instagram)
+    // size parameter is required to get actual URLs instead of placeholders
+    const params: Record<string, any> = {
+        photo_sources: true,
+        size: size
+    };
+
+    try {
+        const response = await stravaApi.get<unknown>(`activities/${activityId}/photos`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: params
+        });
+
+        const validationResult = StravaPhotosResponseSchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (getActivityPhotos: ${activityId}):`, JSON.stringify(validationResult.error.errors, null, 2));
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+
+        return validationResult.data;
+    } catch (error) {
+        return await handleApiError<StravaPhoto[]>(error, `getActivityPhotos for ID ${activityId}`, async () => {
+            // Use new token from environment after refresh
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getActivityPhotos(newToken, activityId, size);
         });
     }
 }

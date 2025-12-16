@@ -24,6 +24,7 @@ import { getActivityStreamsTool } from './tools/getActivityStreams.js';
 import { getActivityLapsTool } from './tools/getActivityLaps.js';
 import { getAthleteZonesTool } from './tools/getAthleteZones.js';
 import { getAllActivities } from './tools/getAllActivities.js';
+import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 
 // Import the actual client function
 // import {
@@ -166,6 +167,14 @@ server.tool(
     getAllActivities.description,
     getAllActivities.inputSchema?.shape ?? {},
     getAllActivities.execute
+);
+
+// --- Register get-activity-photos tool ---
+server.tool(
+    getActivityPhotosTool.name,
+    getActivityPhotosTool.description,
+    getActivityPhotosTool.inputSchema?.shape ?? {},
+    getActivityPhotosTool.execute
 );
 
 // --- Helper Functions ---
