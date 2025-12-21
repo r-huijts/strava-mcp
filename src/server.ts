@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import * as dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getServerInfo, SERVER_NAME } from "./serverInfo.js";
 
 // Import all tool definitions with the correct names
 import { getAthleteProfile } from './tools/getAthleteProfile.js';
@@ -25,6 +26,7 @@ import { getActivityLapsTool } from './tools/getActivityLaps.js';
 import { getAthleteZonesTool } from './tools/getAthleteZones.js';
 import { getAllActivities } from './tools/getAllActivities.js';
 import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
+import { getServerVersionTool } from "./tools/getServerVersion.js";
 
 // Import the actual client function
 // import {
@@ -42,9 +44,11 @@ const envPath = path.join(projectRoot, '.env');
 // console.log(`[DEBUG] Attempting to load .env file from: ${envPath}`);
 dotenv.config({ path: envPath });
 
+const { version: serverVersion } = getServerInfo();
+
 const server = new McpServer({
-  name: "Strava MCP Server",
-  version: "1.0.0"
+    name: SERVER_NAME,
+    version: serverVersion
 });
 
 // Register all tools using server.tool and the correct imported objects
@@ -177,6 +181,14 @@ server.tool(
     getActivityPhotosTool.execute
 );
 
+// --- Register get-server-version tool ---
+server.tool(
+    getServerVersionTool.name,
+    getServerVersionTool.description,
+    {},
+    getServerVersionTool.execute
+);
+
 // --- Helper Functions ---
 // Moving formatDuration to utils or keeping it here if broadly used.
 // For now, it's imported by getActivityLaps.ts
@@ -203,10 +215,10 @@ export function formatDuration(seconds: number): string {
 // --- Server Startup ---
 async function startServer() {
   try {
-    console.error("Starting Strava MCP Server...");
+        console.error(`Starting ${SERVER_NAME} v${serverVersion}...`);
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error(`Strava MCP Server connected via Stdio. Tools registered.`);
+        console.error(`${SERVER_NAME} v${serverVersion} connected via Stdio. Tools registered.`);
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
