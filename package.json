@@ -1,14 +1,17 @@
 {
   "name": "strava-mcp-server",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "MCP server for Strava API",
   "mcpName": "io.github.r-huijts/strava-mcp",
   "repository": {
-    "type": "git", 
+    "type": "git",
     "url": "https://github.com/r-huijts/strava-mcp"
   },
   "main": "dist/server.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.11.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
