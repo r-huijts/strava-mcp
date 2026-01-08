@@ -33,8 +33,11 @@ const StravaActivitySchema = z.object({
     name: z.string(),
     distance: z.number(),
     start_date: z.string().datetime(),
-    // Add other relevant fields from the Strava API response if needed
-    // e.g., moving_time: z.number(), type: z.string(), ...
+    // Keep commonly used fields so downstream filters/formatters work.
+    // Note: Zod strips unknown keys by default.
+    type: z.string().optional(),
+    sport_type: z.string().optional(),
+    moving_time: z.number().int().optional(),
 });
 
 // Define the expected response structure for the activities endpoint
