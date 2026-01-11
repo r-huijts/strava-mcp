@@ -12,3 +12,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Add Vitest test runner and regression tests for `get-all-activities` filtering and schema preservation.
 - Add a stdio-based MCP smoke test script to validate tool behavior against the built `dist/server.js`.
+- Add `perceived_exertion` data in activity detailed model.
