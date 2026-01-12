@@ -79,7 +79,7 @@ function formatActivityDetails(activity: StravaDetailedActivity): string {
     if (activity.calories !== undefined) details += `   - Calories: ${activity.calories.toFixed(0)}\n`;
     if (activity.description) details += `   - Description: ${activity.description}\n`;
     if (activity.gear) details += `   - Gear: ${activity.gear.name}\n`;
-
+    if (activity.perceived_exertion) details += `   - perceived exertion: ${activity.perceived_exertion}\n`
     return details;
 }
 
