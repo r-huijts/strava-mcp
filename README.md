@@ -103,12 +103,28 @@ Skipping steps or performing them out of order may result in environment variabl
 
 ## Installation & Setup
 
-1. **Prerequisites:**
-   - Node.js (v18 or later recommended)
-   - npm (usually comes with Node.js)
-   - A Strava Account
+**Prerequisites:**
+- Node.js (v18 or later recommended)
+- npm (usually comes with Node.js)
+- A Strava Account
 
-### 1. From Source
+### Option 1: Quick Install via npm (Recommended)
+
+The easiest way to use the Strava MCP server is via npm:
+
+```bash
+# Run directly with npx (no installation needed)
+npx strava-mcp-server
+
+# Or install globally
+npm install -g strava-mcp-server
+```
+
+Then configure Claude Desktop to use it (see "Configure Claude Desktop" below).
+
+### Option 2: From Source
+
+If you prefer to build from source or need to modify the code:
 
 1. **Clone Repository:**
    ```bash
@@ -120,32 +136,51 @@ Skipping steps or performing them out of order may result in environment variabl
    ```bash
    npm install
    ```
+
 3. **Build the Project:**
    ```bash
    npm run build
    ```
 
-### 2. Configure Claude Desktop
+### Configure Claude Desktop
 
-Update your Claude configuration file:
+Update your Claude configuration file based on your installation method:
+
+**For npm installation (recommended):**
 
 ```json
 {
   "mcpServers": {
-    "strava-mcp-local": {
-      "command": "node",
-      "args": [
-        "/absolute/path/to/your/strava-mcp/dist/server.js"
-      ]
-      // Environment variables are read from the .env file by the server
+    "strava": {
+      "command": "npx",
+      "args": ["-y", "strava-mcp-server"],
+      "env": {
+        "STRAVA_CLIENT_ID": "your_client_id",
+        "STRAVA_CLIENT_SECRET": "your_client_secret",
+        "STRAVA_ACCESS_TOKEN": "your_access_token",
+        "STRAVA_REFRESH_TOKEN": "your_refresh_token"
+      }
     }
   }
 }
 ```
 
-Make sure to replace `/absolute/path/to/your/strava-mcp/` with the actual path to your installation.
+**For source installation:**
 
-### 3. Strava Authentication Setup
+```json
+{
+  "mcpServers": {
+    "strava": {
+      "command": "node",
+      "args": ["/absolute/path/to/your/strava-mcp/dist/server.js"]
+    }
+  }
+}
+```
+
+When using the source installation, environment variables are read from the `.env` file by the server. Replace `/absolute/path/to/your/strava-mcp/` with the actual path to your installation.
+
+### Strava Authentication Setup
 
 The `setup-auth.ts` script makes it easy to set up authentication with the Strava API. Follow these steps carefully:
 
@@ -166,7 +201,7 @@ npx tsx scripts/setup-auth.ts
 
 Follow the prompts to complete the authentication flow (detailed instructions in the Authentication section below).
 
-### 4. Restart Claude
+### Restart Claude
 
 After completing all the above steps, restart Claude Desktop for the changes to take effect. This ensures that:
 - The new configuration is loaded

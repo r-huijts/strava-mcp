@@ -8,14 +8,27 @@
     "url": "https://github.com/r-huijts/strava-mcp"
   },
   "main": "dist/server.js",
+  "bin": {
+    "strava-mcp-server": "./dist/server.js"
+  },
   "type": "module",
+  "files": [
+    "dist",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
     "lint": "eslint . --ext .ts",
     "setup-auth": "tsx scripts/setup-auth.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
