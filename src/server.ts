@@ -28,6 +28,8 @@ import { getAthleteZonesTool } from './tools/getAthleteZones.js';
 import { getAllActivities } from './tools/getAllActivities.js';
 import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
+import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
+import { loadConfig } from './config.js';
 
 // Import the actual client function
 // import {
@@ -190,6 +192,26 @@ server.tool(
     getServerVersionTool.execute
 );
 
+// --- Register Strava connection tools ---
+server.tool(
+    connectStravaTool.name,
+    connectStravaTool.description,
+    connectStravaTool.inputSchema?.shape ?? {},
+    connectStravaTool.execute
+);
+server.tool(
+    disconnectStravaTool.name,
+    disconnectStravaTool.description,
+    {},
+    disconnectStravaTool.execute
+);
+server.tool(
+    checkStravaConnectionTool.name,
+    checkStravaConnectionTool.description,
+    {},
+    checkStravaConnectionTool.execute
+);
+
 // --- Helper Functions ---
 // Moving formatDuration to utils or keeping it here if broadly used.
 // For now, it's imported by getActivityLaps.ts
@@ -217,6 +239,22 @@ export function formatDuration(seconds: number): string {
 async function startServer() {
   try {
         console.error(`Starting ${SERVER_NAME} v${serverVersion}...`);
+        
+        // Load config from ~/.config/strava-mcp/ and merge with env vars
+        const config = await loadConfig();
+        if (config.accessToken && !process.env.STRAVA_ACCESS_TOKEN) {
+            process.env.STRAVA_ACCESS_TOKEN = config.accessToken;
+        }
+        if (config.refreshToken && !process.env.STRAVA_REFRESH_TOKEN) {
+            process.env.STRAVA_REFRESH_TOKEN = config.refreshToken;
+        }
+        if (config.clientId && !process.env.STRAVA_CLIENT_ID) {
+            process.env.STRAVA_CLIENT_ID = config.clientId;
+        }
+        if (config.clientSecret && !process.env.STRAVA_CLIENT_SECRET) {
+            process.env.STRAVA_CLIENT_SECRET = config.clientSecret;
+        }
+        
     const transport = new StdioServerTransport();
     await server.connect(transport);
         console.error(`${SERVER_NAME} v${serverVersion} connected via Stdio. Tools registered.`);

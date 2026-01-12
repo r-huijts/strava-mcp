@@ -1,8 +1,5 @@
 import axios from "axios";
 import { z } from "zod";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
 
 // --- Axios Instance & Interceptor --- 
 // Create an Axios instance to apply interceptors globally for this client
@@ -314,63 +311,22 @@ export type StravaRoute = z.infer<typeof RouteSchema>;
 const StravaRoutesResponseSchema = z.array(RouteSchema);
 
 // --- Token Refresh Functionality ---
-// Calculate path to .env file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const projectRoot = path.resolve(__dirname, '..');
-const envPath = path.join(projectRoot, '.env');
-
-/**
- * Updates the .env file with new access and refresh tokens
- * @param accessToken - The new access token
- * @param refreshToken - The new refresh token
- */
-async function updateTokensInEnvFile(accessToken: string, refreshToken: string): Promise<void> {
-    try {
-        let envContent = await fs.readFile(envPath, 'utf-8');
-        const lines = envContent.split('\n');
-        const newLines: string[] = [];
-        let accessTokenUpdated = false;
-        let refreshTokenUpdated = false;
-
-        for (const line of lines) {
-            if (line.startsWith('STRAVA_ACCESS_TOKEN=')) {
-                newLines.push(`STRAVA_ACCESS_TOKEN=${accessToken}`);
-                accessTokenUpdated = true;
-            } else if (line.startsWith('STRAVA_REFRESH_TOKEN=')) {
-                newLines.push(`STRAVA_REFRESH_TOKEN=${refreshToken}`);
-                refreshTokenUpdated = true;
-            } else if (line.trim() !== '') {
-                newLines.push(line);
-            }
-        }
-
-        if (!accessTokenUpdated) {
-            newLines.push(`STRAVA_ACCESS_TOKEN=${accessToken}`);
-        }
-        if (!refreshTokenUpdated) {
-            newLines.push(`STRAVA_REFRESH_TOKEN=${refreshToken}`);
-        }
-
-        await fs.writeFile(envPath, newLines.join('\n').trim() + '\n');
-        console.error('✅ Tokens successfully refreshed and updated in .env file.');
-    } catch (error) {
-        console.error('Failed to update tokens in .env file:', error);
-        // Continue execution even if file update fails
-    }
-}
+import { loadConfig, updateTokens } from './config.js';
 
 /**
  * Refreshes the Strava API access token using the refresh token
  * @returns The new access token
  */
 async function refreshAccessToken(): Promise<string> {
-    const refreshToken = process.env.STRAVA_REFRESH_TOKEN;
-    const clientId = process.env.STRAVA_CLIENT_ID;
-    const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+    // Load config from all sources (env vars, config file, .env)
+    const config = await loadConfig();
+    
+    const refreshToken = config.refreshToken;
+    const clientId = config.clientId;
+    const clientSecret = config.clientSecret;
 
     if (!refreshToken || !clientId || !clientSecret) {
-        throw new Error("Missing refresh credentials in .env (STRAVA_REFRESH_TOKEN, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET)");
+        throw new Error("Missing refresh credentials. Please connect your Strava account first using the 'connect-strava' tool.");
     }
 
     try {
@@ -385,18 +341,16 @@ async function refreshAccessToken(): Promise<string> {
         // Update tokens in environment variables for the current process
         const newAccessToken = response.data.access_token;
         const newRefreshToken = response.data.refresh_token;
+        const expiresAt = response.data.expires_at;
 
         if (!newAccessToken || !newRefreshToken) {
             throw new Error('Refresh response missing required tokens');
         }
 
-        process.env.STRAVA_ACCESS_TOKEN = newAccessToken;
-        process.env.STRAVA_REFRESH_TOKEN = newRefreshToken;
+        // Update tokens in config file and process.env
+        await updateTokens(newAccessToken, newRefreshToken, expiresAt);
 
-        // Also update .env file for persistence
-        await updateTokensInEnvFile(newAccessToken, newRefreshToken);
-
-        console.error(`✅ Token refreshed. New token expires: ${new Date(response.data.expires_at * 1000).toLocaleString()}`);
+        console.error(`✅ Token refreshed. New token expires: ${new Date(expiresAt * 1000).toLocaleString()}`);
         return newAccessToken;
     } catch (error) {
         console.error('Failed to refresh access token:', error);
