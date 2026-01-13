@@ -306,6 +306,15 @@ Then point Claude to your local build:
 - Restart Claude Desktop after making config changes
 - Check Claude's developer console for error messages
 
+### JSONRPC.ProtocolTransportError after package name change
+
+If you're getting a JSONRPC error after updating to `@r-huijts/strava-mcp-server`:
+
+1. **Clear npx cache**: Run `rm -rf ~/.npm/_npx` in terminal
+2. **Verify config** uses `@r-huijts/strava-mcp-server` (not the old `strava-mcp-server`)
+3. **Restart Claude Desktop** completely (quit and reopen)
+4. **Test manually**: Run `npx -y @r-huijts/strava-mcp-server` - you should see "Starting Strava MCP Server v1.2.1..."
+
 ---
 
 ## For Developers
