@@ -61,7 +61,7 @@ Add this to the file:
   "mcpServers": {
     "strava": {
       "command": "npx",
-      "args": ["-y", "strava-mcp-server"]
+      "args": ["-y", "@r-huijts/strava-mcp-server"]
     }
   }
 }
@@ -141,7 +141,7 @@ Then update your Claude config to use:
 {
   "mcpServers": {
     "strava": {
-      "command": "strava-mcp-server"
+      "command": "@r-huijts/strava-mcp-server"
     }
   }
 }
@@ -151,12 +151,12 @@ Then update your Claude config to use:
 
 For developers who want to modify the code:
 
-```bash
-git clone https://github.com/r-huijts/strava-mcp.git
-cd strava-mcp
-npm install
-npm run build
-```
+   ```bash
+   git clone https://github.com/r-huijts/strava-mcp.git
+   cd strava-mcp
+   npm install
+   npm run build
+   ```
 
 Then point Claude to your local build:
 

@@ -12,8 +12,8 @@
     {
       "registry_type": "npm",
       "registry_base_url": "https://registry.npmjs.org",
-      "identifier": "strava-mcp-server",
-      "version": "1.0.0",
+      "identifier": "@r-huijts/strava-mcp-server",
+      "version": "1.2.1",
       "transport": {
         "type": "stdio"
       },
