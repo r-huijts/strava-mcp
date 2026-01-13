@@ -1,6 +1,6 @@
 {
   "name": "strava-mcp-server",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "MCP server for Strava API",
   "mcpName": "io.github.r-huijts/strava-mcp",
   "repository": {
@@ -28,6 +28,7 @@
     "lint": "eslint . --ext .ts",
     "setup-auth": "tsx scripts/setup-auth.ts",
     "test": "vitest run",
+    "test:api": "RUN_API_TESTS=true vitest run tests/getActivityStreams.api.test.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

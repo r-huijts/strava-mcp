@@ -1,0 +1,30 @@
+[
+  {
+    "type": "time",
+    "data": Array.from({ length: 1000 }, (_, i) => i),
+    "series_type": "time",
+    "original_size": 1000,
+    "resolution": "medium"
+  },
+  {
+    "type": "distance",
+    "data": Array.from({ length: 1000 }, (_, i) => i * 5.2),
+    "series_type": "time",
+    "original_size": 1000,
+    "resolution": "medium"
+  },
+  {
+    "type": "heartrate",
+    "data": Array.from({ length: 1000 }, (_, i) => 120 + (i % 100)),
+    "series_type": "time",
+    "original_size": 1000,
+    "resolution": "medium"
+  },
+  {
+    "type": "latlng",
+    "data": Array.from({ length: 1000 }, (_, i) => [51.5 + i * 0.0001, -0.1 + i * 0.0001]),
+    "series_type": "time",
+    "original_size": 1000,
+    "resolution": "medium"
+  }
+]

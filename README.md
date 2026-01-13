@@ -242,7 +242,7 @@ Then point Claude to your local build:
 | "Get all my runs from January" | Fetches activities with filters |
 | "Analyze activity 12345" | Detailed info about one activity |
 | "Show the laps from my last run" | Lap-by-lap breakdown |
-| "Get heart rate data from my ride" | Time-series workout data |
+| "Get heart rate data from my ride" | Time-series workout data (optimized compact format) |
 | "Show photos from my hike" | Activity photos |
 
 ### Stats & Progress
@@ -340,6 +340,17 @@ npm install
 npm run build
 npm test
 ```
+
+### Activity Streams Optimization
+
+The `get-activity-streams` tool uses a compact format by default, reducing payload size by ~70-80% while preserving all data:
+
+- **Compact format** (default): Raw arrays with metadata, ~70-80% smaller, ideal for LLM processing
+- **Verbose format**: Human-readable objects with formatted values (backward compatible)
+- **Smart chunking**: Large activities automatically split into ~50KB chunks
+- **Optional downsampling**: Can reduce very large datasets while preserving key features
+
+The compact format includes comprehensive metadata (units, descriptions, statistics) so LLMs can understand the raw numeric data.
 
 ### API Reference
 

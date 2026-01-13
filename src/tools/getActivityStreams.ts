@@ -58,6 +58,17 @@ export const inputSchema = z.object({
             '- Positive number: Returns that many points per page\n' +
             '- -1: Returns ALL data points split into multiple messages (~1000 points each)\n' +
             'Use -1 when you need the complete activity data for analysis.'
+        ),
+    format: z.enum(['compact', 'verbose']).optional().default('compact')
+        .describe(
+            'Output format:\n' +
+            '- compact: Raw arrays, minified JSON (~70-80% smaller, LLM-friendly)\n' +
+            '- verbose: Human-readable objects with formatted values (backward compatible)'
+        ),
+    max_points: z.number().optional()
+        .describe(
+            'Maximum number of data points to return. If activity exceeds this, data will be intelligently downsampled ' +
+            'while preserving peaks and valleys. Useful for very large activities.'
         )
 });
 
@@ -132,6 +143,191 @@ type StreamSet = (TimeStream | DistanceStream | LatLngStream | AltitudeStream |
                  VelocityStream | HeartrateStream | CadenceStream | PowerStream | 
                  TempStream | MovingStream | GradeStream)[];
 
+// Formatting functions (exported for testing)
+export function formatStreamDataCompact(stream: BaseStream, data: any[]): any {
+    switch (stream.type) {
+        case 'latlng':
+            return data as [number, number][];
+        case 'time':
+        case 'distance':
+        case 'altitude':
+        case 'velocity_smooth':
+        case 'heartrate':
+        case 'cadence':
+        case 'watts':
+        case 'temp':
+        case 'grade_smooth':
+            return data as number[];
+        case 'moving':
+            return data as boolean[];
+        default:
+            return data;
+    }
+}
+
+export function formatStreamDataVerbose(stream: BaseStream, data: any[]): any {
+    switch (stream.type) {
+        case 'latlng':
+            const latlngData = data as [number, number][];
+            return latlngData.map(([lat, lng]) => ({
+                latitude: Number(lat.toFixed(6)),
+                longitude: Number(lng.toFixed(6))
+            }));
+        
+        case 'time':
+            const timeData = data as number[];
+            return timeData.map(seconds => ({
+                seconds_from_start: seconds,
+                formatted: new Date(seconds * 1000).toISOString().substr(11, 8)
+            }));
+        
+        case 'distance':
+            const distanceData = data as number[];
+            return distanceData.map(meters => ({
+                meters,
+                kilometers: Number((meters / 1000).toFixed(2))
+            }));
+        
+        case 'velocity_smooth':
+            const velocityData = data as number[];
+            return velocityData.map(mps => ({
+                meters_per_second: mps,
+                kilometers_per_hour: Number((mps * 3.6).toFixed(1))
+            }));
+        
+        case 'heartrate':
+        case 'cadence':
+        case 'watts':
+        case 'temp':
+            const numericData = data as number[];
+            return numericData.map(v => Number(v));
+        
+        case 'grade_smooth':
+            const gradeData = data as number[];
+            return gradeData.map(grade => Number(grade.toFixed(1)));
+        
+        case 'moving':
+            return data as boolean[];
+        
+        default:
+            return data;
+    }
+}
+
+// Intelligent downsampling that preserves peaks and valleys (exported for testing)
+export function downsampleStream(stream: BaseStream, maxPoints: number): any[] {
+    const data = stream.data;
+    if (data.length <= maxPoints) {
+        return data;
+    }
+
+    // Always preserve first and last points
+    const result: any[] = [data[0]];
+    const step = (data.length - 1) / (maxPoints - 1);
+
+    // For numeric streams, preserve local peaks and valleys
+    if (stream.type !== 'latlng' && stream.type !== 'moving') {
+        const numericData = data as number[];
+        const indices: number[] = [0];
+        
+        // Sample at regular intervals but also check for peaks/valleys
+        for (let i = 1; i < maxPoints - 1; i++) {
+            const targetIdx = Math.round(i * step);
+            indices.push(targetIdx);
+            
+            // Check neighborhood for peaks/valleys
+            const window = 3;
+            const start = Math.max(1, targetIdx - window);
+            const end = Math.min(numericData.length - 2, targetIdx + window);
+            
+            let maxIdx = targetIdx;
+            let minIdx = targetIdx;
+            for (let j = start; j <= end; j++) {
+                const val = numericData[j];
+                const maxVal = numericData[maxIdx];
+                const minVal = numericData[minIdx];
+                if (val !== undefined && maxVal !== undefined && val > maxVal) maxIdx = j;
+                if (val !== undefined && minVal !== undefined && val < minVal) minIdx = j;
+            }
+            
+            // Add peak or valley if significantly different
+            const targetVal = numericData[targetIdx];
+            const maxVal = numericData[maxIdx];
+            const minVal = numericData[minIdx];
+            if (targetVal !== undefined && maxVal !== undefined && maxIdx !== targetIdx && Math.abs(maxVal - targetVal) > targetVal * 0.1) {
+                if (!indices.includes(maxIdx)) indices.push(maxIdx);
+            }
+            if (targetVal !== undefined && minVal !== undefined && minIdx !== targetIdx && Math.abs(minVal - targetVal) > targetVal * 0.1) {
+                if (!indices.includes(minIdx)) indices.push(minIdx);
+            }
+        }
+        
+        indices.push(data.length - 1);
+        indices.sort((a, b) => a - b);
+        
+        // Remove duplicates and limit to maxPoints
+        const uniqueIndices = Array.from(new Set(indices)).slice(0, maxPoints);
+        return uniqueIndices.map(idx => data[idx]).filter(v => v !== undefined);
+    } else {
+        // For latlng and moving, use uniform sampling
+        for (let i = 1; i < maxPoints - 1; i++) {
+            const idx = Math.round(i * step);
+            const val = data[idx];
+            if (val !== undefined) result.push(val);
+        }
+        const lastVal = data[data.length - 1];
+        if (lastVal !== undefined) result.push(lastVal);
+        return result;
+    }
+}
+
+// Calculate optimal chunk size based on estimated JSON size (exported for testing)
+export function calculateOptimalChunkSize(
+    totalPoints: number,
+    numStreamTypes: number,
+    format: 'compact' | 'verbose',
+    sampleData?: any
+): number {
+    const TARGET_SIZE_KB = 50;
+    
+    // Estimate bytes per point based on format
+    let bytesPerPoint: number;
+    if (format === 'compact') {
+        // Compact: arrays, minimal structure
+        // Estimate: ~20-30 bytes per point per stream type (numbers, arrays)
+        bytesPerPoint = numStreamTypes * 25;
+    } else {
+        // Verbose: objects with formatted values
+        // Estimate: ~100-150 bytes per point per stream type
+        bytesPerPoint = numStreamTypes * 120;
+    }
+    
+    // Add overhead for JSON structure (~500 bytes)
+    const overhead = 500;
+    
+    // Calculate chunk size
+    const targetBytes = TARGET_SIZE_KB * 1024;
+    const estimatedChunkSize = Math.floor((targetBytes - overhead) / bytesPerPoint);
+    
+    // Ensure reasonable bounds
+    const minChunkSize = 50;
+    const maxChunkSize = format === 'compact' ? 2000 : 1000;
+    
+    let chunkSize = Math.max(minChunkSize, Math.min(maxChunkSize, estimatedChunkSize));
+    
+    // If we have sample data, refine estimate
+    if (sampleData) {
+        const sampleSize = JSON.stringify(sampleData).length;
+        if (sampleSize > 0) {
+            const actualBytesPerPoint = sampleSize / Math.min(100, totalPoints);
+            chunkSize = Math.floor((targetBytes - overhead) / (actualBytesPerPoint * numStreamTypes));
+            chunkSize = Math.max(minChunkSize, Math.min(maxChunkSize, chunkSize));
+        }
+    }
+    
+    return chunkSize;
+}
+
 // Tool definition
 export const getActivityStreamsTool = {
     name: 'get-activity-streams',
@@ -142,9 +338,14 @@ export const getActivityStreamsTool = {
         'Key Features:\n' +
         '1. Multiple Data Types: Access various metrics like heart rate, power, speed, GPS coordinates, etc.\n' +
         '2. Flexible Resolution: Choose data density from low (~100 points) to high (~10000 points)\n' +
-        '3. Smart Pagination: Get data in manageable chunks or all at once\n' +
+        '3. Smart Pagination: Get data in manageable chunks optimized for LLM context limits\n' +
         '4. Rich Statistics: Includes min/max/avg for numeric streams\n' +
-        '5. Formatted Output: Data is processed into human and LLM-friendly formats\n\n' +
+        '5. Dual Format Support: Compact (LLM-optimized) or verbose (human-readable)\n' +
+        '6. Intelligent Downsampling: Automatically reduce large datasets while preserving key features\n\n' +
+        
+        'Format Options:\n' +
+        '- compact (default): Raw arrays, minified JSON, ~70-80% smaller payloads, ideal for LLM processing\n' +
+        '- verbose: Human-readable objects with formatted values, backward compatible with legacy format\n\n' +
         
         'Common Use Cases:\n' +
         '- Analyzing workout intensity through heart rate zones\n' +
@@ -154,17 +355,18 @@ export const getActivityStreamsTool = {
         '- Detailed segment analysis\n\n' +
         
         'Output Format:\n' +
-        '1. Metadata: Activity overview, available streams, data points\n' +
+        '1. Metadata: Activity overview, available streams, data points, units, format info\n' +
         '2. Statistics: Summary stats for each stream type (max/min/avg where applicable)\n' +
-        '3. Stream Data: Actual time-series data, formatted for easy use\n\n' +
+        '3. Data: Time-series data in compact arrays or verbose objects (based on format parameter)\n\n' +
         
         'Notes:\n' +
         '- Requires activity:read scope\n' +
         '- Not all streams are available for all activities\n' +
         '- Older activities might have limited data\n' +
-        '- Large activities are automatically paginated to handle size limits',
+        '- Large activities are automatically chunked to ~50KB per message\n' +
+        '- Use max_points parameter to downsample very large activities intelligently',
     inputSchema,
-    execute: async ({ id, types, resolution, series_type, page = 1, points_per_page = 100 }: GetActivityStreamsParams) => {
+    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points }: GetActivityStreamsParams) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
         if (!token) {
             return {
@@ -189,7 +391,7 @@ export const getActivityStreamsTool = {
             const endpoint = `/activities/${id}/streams/${types.join(',')}${queryString ? '?' + queryString : ''}`;
             
             const response = await stravaApi.get<StreamSet>(endpoint);
-            const streams = response.data;
+            let streams = response.data;
 
             if (!streams || streams.length === 0) {
                 return {
@@ -205,8 +407,22 @@ export const getActivityStreamsTool = {
             }
 
             // At this point we know streams[0] exists because we checked length > 0
-            const referenceStream = streams[0]!;
-            const totalPoints = referenceStream.data.length;
+            let referenceStream = streams[0]!;
+            let totalPoints = referenceStream.data.length;
+            let wasDownsampled = false;
+            let originalPoints = totalPoints;
+
+            // Apply downsampling if max_points is specified
+            if (max_points && totalPoints > max_points) {
+                originalPoints = totalPoints;
+                streams = streams.map(stream => ({
+                    ...stream,
+                    data: downsampleStream(stream, max_points)
+                }));
+                referenceStream = streams[0]!;
+                totalPoints = referenceStream.data.length;
+                wasDownsampled = true;
+            }
 
             // Generate stream statistics first (they're always included)
             const streamStats: Record<string, any> = {};
@@ -253,8 +469,8 @@ export const getActivityStreamsTool = {
 
             // Special case: return all data in multiple messages if points_per_page is -1
             if (points_per_page === -1) {
-                // Calculate optimal chunk size (aim for ~500KB per message)
-                const CHUNK_SIZE = 1000; // Adjust this if needed
+                // Calculate optimal chunk size based on format
+                const CHUNK_SIZE = calculateOptimalChunkSize(totalPoints, streams.length, format);
                 const numChunks = Math.ceil(totalPoints / CHUNK_SIZE);
 
                 // Return array of messages
@@ -275,83 +491,58 @@ export const getActivityStreamsTool = {
                                           total_chunks: numChunks,
                                           chunk_size: CHUNK_SIZE,
                                           resolution: referenceStream.resolution,
-                                          series_type: referenceStream.series_type
+                                          series_type: referenceStream.series_type,
+                                          format,
+                                          units: {
+                                              time: 'seconds',
+                                              distance: 'meters',
+                                              altitude: 'meters',
+                                              velocity_smooth: 'meters_per_second',
+                                              heartrate: 'beats_per_minute',
+                                              cadence: 'revolutions_per_minute',
+                                              watts: 'watts',
+                                              temp: 'celsius',
+                                              grade_smooth: 'percent',
+                                              latlng: '[latitude, longitude]',
+                                              moving: 'boolean'
+                                          },
+                                          stream_descriptions: {
+                                              time: 'Time elapsed from activity start',
+                                              distance: 'Cumulative distance from start',
+                                              altitude: 'Elevation above sea level',
+                                              velocity_smooth: 'Smoothed speed',
+                                              heartrate: 'Heart rate',
+                                              cadence: 'Pedal/step cadence',
+                                              watts: 'Power output',
+                                              temp: 'Temperature',
+                                              grade_smooth: 'Road grade percentage',
+                                              latlng: 'GPS coordinates [latitude, longitude]',
+                                              moving: 'Whether athlete was moving'
+                                          },
+                                          ...(wasDownsampled && { downsampled: true, original_points: originalPoints })
                                       },
                                       statistics: streamStats
-                                  }, null, 2)
+                                  }, format === 'compact' ? undefined : null, format === 'compact' ? undefined : 2)
                         },
                         // Data messages
                         ...Array.from({ length: numChunks }, (_, i) => {
                             const chunkStart = i * CHUNK_SIZE;
                             const chunkEnd = Math.min(chunkStart + CHUNK_SIZE, totalPoints);
-                            const streamData: Record<string, any> = { streams: {} };
+                            const streamData: Record<string, any> = { data: {} };
 
                             // Process each stream for this chunk
                             streams.forEach(stream => {
                                 const chunkData = stream.data.slice(chunkStart, chunkEnd);
-                                let processedData: any;
-                                
-                                switch (stream.type) {
-                                    case 'latlng':
-                                        const latlngData = chunkData as [number, number][];
-                                        processedData = latlngData.map(([lat, lng]) => ({
-                                            latitude: Number(lat.toFixed(6)),
-                                            longitude: Number(lng.toFixed(6))
-                                        }));
-                                        break;
-                                    
-                                    case 'time':
-                                        const timeData = chunkData as number[];
-                                        processedData = timeData.map(seconds => ({
-                                            seconds_from_start: seconds,
-                                            formatted: new Date(seconds * 1000).toISOString().substr(11, 8)
-                                        }));
-                                        break;
-                                    
-                                    case 'distance':
-                                        const distanceData = chunkData as number[];
-                                        processedData = distanceData.map(meters => ({
-                                            meters,
-                                            kilometers: Number((meters / 1000).toFixed(2))
-                                        }));
-                                        break;
-                                    
-                                    case 'velocity_smooth':
-                                        const velocityData = chunkData as number[];
-                                        processedData = velocityData.map(mps => ({
-                                            meters_per_second: mps,
-                                            kilometers_per_hour: Number((mps * 3.6).toFixed(1))
-                                        }));
-                                        break;
-                                    
-                                    case 'heartrate':
-                                    case 'cadence':
-                                    case 'watts':
-                                    case 'temp':
-                                        const numericData = chunkData as number[];
-                                        processedData = numericData.map(v => Number(v));
-                                        break;
-                                    
-                                    case 'grade_smooth':
-                                        const gradeData = chunkData as number[];
-                                        processedData = gradeData.map(grade => Number(grade.toFixed(1)));
-                                        break;
-                                    
-                                    case 'moving':
-                                        processedData = chunkData as boolean[];
-                                        break;
-                                    
-                                    default:
-                                        processedData = chunkData;
-                                }
-
-                                streamData.streams[stream.type] = processedData;
+                                const processedData = format === 'compact' 
+                                    ? formatStreamDataCompact(stream, chunkData)
+                                    : formatStreamDataVerbose(stream, chunkData);
+                                streamData.data[stream.type] = processedData;
                             });
 
                             return {
                                 type: 'text' as const,
                                 text: `Message ${i + 2}/${numChunks + 1} (points ${chunkStart + 1}-${chunkEnd}):\n` +
-                                      JSON.stringify(streamData, null, 2)
+                                      JSON.stringify(streamData, format === 'compact' ? undefined : null, format === 'compact' ? undefined : 2)
                             };
                         })
                     ]
@@ -384,78 +575,53 @@ export const getActivityStreamsTool = {
                     current_page: page,
                     total_pages: totalPages,
                     points_per_page,
-                    points_in_page: endIdx - startIdx
+                    points_in_page: endIdx - startIdx,
+                    format,
+                    units: {
+                        time: 'seconds',
+                        distance: 'meters',
+                        altitude: 'meters',
+                        velocity_smooth: 'meters_per_second',
+                        heartrate: 'beats_per_minute',
+                        cadence: 'revolutions_per_minute',
+                        watts: 'watts',
+                        temp: 'celsius',
+                        grade_smooth: 'percent',
+                        latlng: '[latitude, longitude]',
+                        moving: 'boolean'
+                    },
+                    stream_descriptions: {
+                        time: 'Time elapsed from activity start',
+                        distance: 'Cumulative distance from start',
+                        altitude: 'Elevation above sea level',
+                        velocity_smooth: 'Smoothed speed',
+                        heartrate: 'Heart rate',
+                        cadence: 'Pedal/step cadence',
+                        watts: 'Power output',
+                        temp: 'Temperature',
+                        grade_smooth: 'Road grade percentage',
+                        latlng: 'GPS coordinates [latitude, longitude]',
+                        moving: 'Whether athlete was moving'
+                    },
+                    ...(wasDownsampled && { downsampled: true, original_points: originalPoints })
                 },
                 statistics: streamStats,
-                streams: {}
+                data: {}
             };
 
             // Process each stream with pagination
             streams.forEach(stream => {
-                let processedData: any;
                 const paginatedData = stream.data.slice(startIdx, endIdx);
-                
-                switch (stream.type) {
-                    case 'latlng':
-                        const latlngData = paginatedData as [number, number][];
-                        processedData = latlngData.map(([lat, lng]) => ({
-                            latitude: Number(lat.toFixed(6)),
-                            longitude: Number(lng.toFixed(6))
-                        }));
-                        break;
-                    
-                    case 'time':
-                        const timeData = paginatedData as number[];
-                        processedData = timeData.map(seconds => ({
-                            seconds_from_start: seconds,
-                            formatted: new Date(seconds * 1000).toISOString().substr(11, 8)
-                        }));
-                        break;
-                    
-                    case 'distance':
-                        const distanceData = paginatedData as number[];
-                        processedData = distanceData.map(meters => ({
-                            meters,
-                            kilometers: Number((meters / 1000).toFixed(2))
-                        }));
-                        break;
-                    
-                    case 'velocity_smooth':
-                        const velocityData = paginatedData as number[];
-                        processedData = velocityData.map(mps => ({
-                            meters_per_second: mps,
-                            kilometers_per_hour: Number((mps * 3.6).toFixed(1))
-                        }));
-                        break;
-                    
-                    case 'heartrate':
-                    case 'cadence':
-                    case 'watts':
-                    case 'temp':
-                        const numericData = paginatedData as number[];
-                        processedData = numericData.map(v => Number(v));
-                        break;
-                    
-                    case 'grade_smooth':
-                        const gradeData = paginatedData as number[];
-                        processedData = gradeData.map(grade => Number(grade.toFixed(1)));
-                        break;
-                    
-                    case 'moving':
-                        processedData = paginatedData as boolean[];
-                        break;
-                    
-                    default:
-                        processedData = paginatedData;
-                }
-
-                streamData.streams[stream.type] = processedData;
+                const processedData = format === 'compact' 
+                    ? formatStreamDataCompact(stream, paginatedData)
+                    : formatStreamDataVerbose(stream, paginatedData);
+                streamData.data[stream.type] = processedData;
             });
 
             return {
                 content: [{ 
                     type: 'text' as const, 
-                    text: JSON.stringify(streamData, null, 2)
+                    text: JSON.stringify(streamData, format === 'compact' ? undefined : null, format === 'compact' ? undefined : 2)
                 }]
             };
         } catch (error: any) {
