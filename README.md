@@ -132,7 +132,7 @@ No installation needed! The `npx` command in the Quick Start automatically downl
 If you prefer to install it once:
 
 ```bash
-npm install -g strava-mcp-server
+npm install -g @r-huijts/strava-mcp-server
 ```
 
 Then update your Claude config to use:
@@ -141,11 +141,13 @@ Then update your Claude config to use:
 {
   "mcpServers": {
     "strava": {
-      "command": "@r-huijts/strava-mcp-server"
+      "command": "strava-mcp-server"
     }
   }
 }
 ```
+
+**Note:** Even though the package name is `@r-huijts/strava-mcp-server`, the executable name remains `strava-mcp-server` for backward compatibility.
 
 ### Option C: Build from Source
 
