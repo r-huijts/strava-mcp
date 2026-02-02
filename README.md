@@ -67,6 +67,23 @@ Add this to the file:
 }
 ```
 
+### Step 1 (alternative): Add to Claude Code
+
+You can add this MCP server to claude code with the following command:
+
+```
+claude mcp add --transport stdio strava -- npx @r-huijts/strava-mcp-server
+```
+
+You can confirm successful instalation as follows:
+
+```
+% claude mcp list
+Checking MCP server health...
+
+strava: npx @r-huijts/strava-mcp-server - ✓ Connected
+```
+
 ### Step 2: Restart Claude Desktop
 
 Close and reopen Claude Desktop to load the new configuration.
