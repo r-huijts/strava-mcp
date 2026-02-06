@@ -109,6 +109,7 @@ export function startAuthServer(): Promise<AuthResult> {
                     const error = url.searchParams.get('error');
                     
                     if (error) {
+                        await clearClientCredentials();
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(errorPage('Authorization denied', error));
                         finish({
