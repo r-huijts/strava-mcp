@@ -144,5 +144,7 @@ export async function clearClientCredentials(): Promise<void> {
     } catch {
         // loadConfigFile handles missing/corrupted files internally (returns {}),
         // so this catch only covers writeFile failures (e.g. permission issues).
+        // In that case, old credentials remain in config.json
+        // the user will need to manually delete the file or fix permissions.
     }
 }
