@@ -130,3 +130,19 @@ export async function clearConfig(): Promise<void> {
         // File might not exist, that's fine
     }
 }
+
+/**
+ * Clears only client credentials (clientId/clientSecret) while preserving tokens
+ */
+export async function clearClientCredentials(): Promise<void> {
+    try {
+        const existing = await loadConfigFile();
+        delete existing.clientId;
+        delete existing.clientSecret;
+        await ensureConfigDir();
+        await fs.writeFile(CONFIG_FILE, JSON.stringify(existing, null, 2), 'utf-8');
+    } catch {
+        // loadConfigFile handles missing/corrupted files internally (returns {}),
+        // so this catch only covers writeFile failures (e.g. permission issues).
+    }
+}
