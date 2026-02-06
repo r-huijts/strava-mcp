@@ -2,7 +2,7 @@ import http from 'http';
 import { URL } from 'url';
 import axios from 'axios';
 import { setupPage, successPage, errorPage } from './pages.js';
-import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials } from '../config.js';
+import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials, clearClientCredentials } from '../config.js';
 
 const PORT = 8111;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
@@ -158,6 +158,7 @@ export function startAuthServer(): Promise<AuthResult> {
                             athleteName,
                         });
                     } catch (err: any) {
+                        await clearClientCredentials();
                         const errorMsg = err.response?.data?.message || err.message || 'Unknown error';
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(errorPage('Failed to exchange authorization code', errorMsg));
