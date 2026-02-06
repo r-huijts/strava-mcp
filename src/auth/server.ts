@@ -51,6 +51,10 @@ export function startAuthServer(): Promise<AuthResult> {
             
             try {
                 if (url.pathname === '/setup' && req.method === 'GET') {
+                    // Handle reset parameter
+                    if (url.searchParams.get('reset') === 'true') {
+                        await clearClientCredentials();
+                    }
                     // Show setup form
                     const config = await loadConfig();
                     if (hasClientCredentials(config)) {

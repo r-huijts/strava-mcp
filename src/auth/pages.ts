@@ -220,7 +220,7 @@ export function errorPage(message: string, details?: string): string {
         <h1>Connection Failed</h1>
         <div class="error-message">${escapeHtml(message)}</div>
         ${detailsHtml}
-        <button onclick="window.location.href='/setup'">Try Again</button>
+        <button onclick="window.location.href='/setup?reset=true'">Try Again</button>
     </div>
 </body>
 </html>`;
