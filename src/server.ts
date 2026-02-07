@@ -30,6 +30,7 @@ import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
 import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
 import { loadConfig } from './config.js';
+import { getBulkActivityStreamsTool } from './tools/getBulkActivityStreams.js';
 
 // Import the actual client function
 // import {
@@ -62,13 +63,13 @@ server.tool(
     getAthleteProfile.execute
 );
 server.tool(
-    getAthleteStatsTool.name, 
+    getAthleteStatsTool.name,
     getAthleteStatsTool.description,
     getAthleteStatsTool.inputSchema?.shape ?? {},
     getAthleteStatsTool.execute
 );
 server.tool(
-    getActivityDetailsTool.name, 
+    getActivityDetailsTool.name,
     getActivityDetailsTool.description,
     getActivityDetailsTool.inputSchema?.shape ?? {},
     getActivityDetailsTool.execute
@@ -92,7 +93,7 @@ server.tool(
     listStarredSegments.execute
 );
 server.tool(
-    getSegmentTool.name, 
+    getSegmentTool.name,
     getSegmentTool.description,
     getSegmentTool.inputSchema?.shape ?? {},
     getSegmentTool.execute
@@ -110,19 +111,19 @@ server.tool(
     starSegment.execute
 );
 server.tool(
-    getSegmentEffortTool.name, 
+    getSegmentEffortTool.name,
     getSegmentEffortTool.description,
     getSegmentEffortTool.inputSchema?.shape ?? {},
     getSegmentEffortTool.execute
 );
 server.tool(
-    listSegmentEffortsTool.name, 
+    listSegmentEffortsTool.name,
     listSegmentEffortsTool.description,
     listSegmentEffortsTool.inputSchema?.shape ?? {},
     listSegmentEffortsTool.execute
 );
 server.tool(
-    listAthleteRoutesTool.name, 
+    listAthleteRoutesTool.name,
     listAthleteRoutesTool.description,
     listAthleteRoutesTool.inputSchema?.shape ?? {},
     listAthleteRoutesTool.execute
@@ -154,7 +155,7 @@ server.tool(
 
 // --- Register get-activity-laps tool (Simplified) ---
 server.tool(
-    getActivityLapsTool.name, 
+    getActivityLapsTool.name,
     getActivityLapsTool.description,
     getActivityLapsTool.inputSchema?.shape ?? {},
     getActivityLapsTool.execute
@@ -162,7 +163,7 @@ server.tool(
 
 // --- Register get-athlete-zones tool ---
 server.tool(
-    getAthleteZonesTool.name, 
+    getAthleteZonesTool.name,
     getAthleteZonesTool.description,
     getAthleteZonesTool.inputSchema?.shape ?? {},
     getAthleteZonesTool.execute
@@ -212,6 +213,14 @@ server.tool(
     checkStravaConnectionTool.execute
 );
 
+// --- Register get-bulk-activity-streams tool (token-efficient) ---
+server.tool(
+    getBulkActivityStreamsTool.name,
+    getBulkActivityStreamsTool.description,
+    getBulkActivityStreamsTool.inputSchema?.shape ?? {},
+    getBulkActivityStreamsTool.execute
+);
+
 // --- Helper Functions ---
 // Moving formatDuration to utils or keeping it here if broadly used.
 // For now, it's imported by getActivityLaps.ts
@@ -239,7 +248,7 @@ export function formatDuration(seconds: number): string {
 async function startServer() {
   try {
         console.error(`Starting ${SERVER_NAME} v${serverVersion}...`);
-        
+
         // Load config from ~/.config/strava-mcp/ and merge with env vars
         const config = await loadConfig();
         if (config.accessToken && !process.env.STRAVA_ACCESS_TOKEN) {
@@ -254,7 +263,7 @@ async function startServer() {
         if (config.clientSecret && !process.env.STRAVA_CLIENT_SECRET) {
             process.env.STRAVA_CLIENT_SECRET = config.clientSecret;
         }
-        
+
     const transport = new StdioServerTransport();
     await server.connect(transport);
         console.error(`${SERVER_NAME} v${serverVersion} connected via Stdio. Tools registered.`);
