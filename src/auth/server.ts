@@ -1,7 +1,7 @@
 import http from 'http';
 import { URL } from 'url';
 import axios from 'axios';
-import { setupPage, successPage, errorPage } from './pages.js';
+import { setupPage, successPage, errorPage, credentialsExistPage } from './pages.js';
 import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials, clearClientCredentials } from '../config.js';
 
 const PORT = 8111;
@@ -58,9 +58,9 @@ export function startAuthServer(): Promise<AuthResult> {
                     // Show setup form
                     const config = await loadConfig();
                     if (hasClientCredentials(config)) {
-                        // Already have credentials, redirect to auth
-                        res.writeHead(302, { Location: '/auth' });
-                        res.end();
+                        // Already have credentials, show intermediate page
+                        res.writeHead(200, { 'Content-Type': 'text/html' });
+                        res.end(credentialsExistPage(config.clientId!));
                     } else {
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(setupPage());

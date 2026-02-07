@@ -263,6 +263,54 @@ export function waitingPage(): string {
 }
 
 /**
+ * Credentials exist page - shown when credentials are already saved
+ * Offers to continue with existing credentials or re-enter them
+ */
+export function credentialsExistPage(clientId: string): string {
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Strava</title>
+    <style>
+        ${baseStyles}
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-top: 12px;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: none;
+            transform: none;
+        }
+        .credential-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #a0a0a0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🏃‍♂️</div>
+        <h1>Connect to Strava</h1>
+        <p>You already have saved API credentials.</p>
+        <div class="credential-info">Client ID: ${escapeHtml(clientId)}</div>
+        <button onclick="window.location.href='/auth'">Continue to Strava →</button>
+        <button class="btn-secondary" onclick="window.location.href='/setup?reset=true'">Re-enter credentials</button>
+    </div>
+</body>
+</html>`;
+}
+
+/**
  * Escape HTML to prevent XSS
  */
 function escapeHtml(text: string): string {
