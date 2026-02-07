@@ -1,8 +1,8 @@
 import http from 'http';
 import { URL } from 'url';
 import axios from 'axios';
-import { setupPage, successPage, errorPage } from './pages.js';
-import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials } from '../config.js';
+import { setupPage, successPage, errorPage, credentialsExistPage } from './pages.js';
+import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials, clearClientCredentials } from '../config.js';
 
 const PORT = 8111;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
@@ -51,12 +51,16 @@ export function startAuthServer(): Promise<AuthResult> {
             
             try {
                 if (url.pathname === '/setup' && req.method === 'GET') {
+                    // Handle reset parameter
+                    if (url.searchParams.get('reset') === 'true') {
+                        await clearClientCredentials();
+                    }
                     // Show setup form
                     const config = await loadConfig();
                     if (hasClientCredentials(config)) {
-                        // Already have credentials, redirect to auth
-                        res.writeHead(302, { Location: '/auth' });
-                        res.end();
+                        // Already have credentials, show intermediate page
+                        res.writeHead(200, { 'Content-Type': 'text/html' });
+                        res.end(credentialsExistPage(config.clientId!));
                     } else {
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(setupPage());
@@ -105,6 +109,7 @@ export function startAuthServer(): Promise<AuthResult> {
                     const error = url.searchParams.get('error');
                     
                     if (error) {
+                        await clearClientCredentials();
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(errorPage('Authorization denied', error));
                         finish({
@@ -158,6 +163,7 @@ export function startAuthServer(): Promise<AuthResult> {
                             athleteName,
                         });
                     } catch (err: any) {
+                        await clearClientCredentials();
                         const errorMsg = err.response?.data?.message || err.message || 'Unknown error';
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(errorPage('Failed to exchange authorization code', errorMsg));
