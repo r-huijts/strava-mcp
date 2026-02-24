@@ -59,7 +59,7 @@ function formatActivityDetails(activity: StravaDetailedActivity): string {
     const avgSpeed = formatSpeed(activity.average_speed);
     const maxSpeed = formatSpeed(activity.max_speed);
     const avgPace = formatPace(activity.average_speed); // Calculate pace from speed
-
+    
     let details = `🏃 **${activity.name}** (ID: ${activity.id})\n`;
     details += `   - Type: ${activity.type} (${activity.sport_type})\n`;
     details += `   - Date: ${date}\n`;
@@ -79,7 +79,8 @@ function formatActivityDetails(activity: StravaDetailedActivity): string {
     if (activity.calories !== undefined) details += `   - Calories: ${activity.calories.toFixed(0)}\n`;
     if (activity.description) details += `   - Description: ${activity.description}\n`;
     if (activity.gear) details += `   - Gear: ${activity.gear.name}\n`;
-    if (activity.perceived_exertion) details += `   - perceived exertion: ${activity.perceived_exertion}\n`
+    if (activity.perceived_exertion) details += `   - perceived exertion: ${activity.perceived_exertion}\n`;
+    if (activity.suffer_score) details += `   - Relative effort (Training Impulse): ${activity.suffer_score}\n`
     return details;
 }
 

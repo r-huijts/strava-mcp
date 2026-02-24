@@ -239,6 +239,7 @@ const DetailedActivitySchema = z.object({
     gear: SummaryGearSchema,
     device_name: z.string().optional().nullable(),
     perceived_exertion: z.number().optional().nullable(),
+    suffer_score: z.number().optional().nullable(),
     // segment_efforts: // Add DetailedSegmentEffort schema if needed
     // splits_metric: // Add Split schema if needed
     // splits_standard: // Add Split schema if needed
