@@ -50,15 +50,4 @@ export const getAthleteProfile = {
         };
       }
     }
-};
-
-// Removed old registration function
-/*
-export function registerGetAthleteProfileTool(server: McpServer) {
-  server.tool(
-    getAthleteProfile.name,
-    getAthleteProfile.description,
-    getAthleteProfile.execute // No input schema
-  );
-}
-*/ 
+}; 
