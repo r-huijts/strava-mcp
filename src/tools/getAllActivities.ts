@@ -62,7 +62,7 @@ type GetAllActivitiesInput = z.infer<typeof GetAllActivitiesInputSchema>;
 
 // Helper function to format activity summary
 function formatActivitySummary(activity: any): string {
-    const date = activity.start_date ? new Date(activity.start_date).toLocaleDateString() : 'N/A';
+    const date = activity.start_date ?? 'N/A';
     const distance = activity.distance ? `${(activity.distance / 1000).toFixed(2)} km` : 'N/A';
     const duration = activity.moving_time ? formatDuration(activity.moving_time) : 'N/A';
     const type = activity.sport_type || activity.type || 'Unknown';

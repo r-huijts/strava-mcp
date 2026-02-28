@@ -43,7 +43,7 @@ export const getRecentActivities = {
 
         // Map to content items with literal type
         const contentItems = activities.map(activity => {
-          const dateStr = activity.start_date ? new Date(activity.start_date).toLocaleDateString() : 'N/A';
+          const dateStr = activity.start_date ?? 'N/A';
           const distanceStr = activity.distance ? `${activity.distance}m` : 'N/A';
           // Ensure each item conforms to { type: "text", text: string }
           const item: { type: "text", text: string } = {
