@@ -43,7 +43,7 @@ function formatSegmentEffort(effort: StravaDetailedSegmentEffort): string {
     let details = `⏱️ **Segment Effort: ${effort.name}** (ID: ${effort.id})\n`;
     details += `   - Activity ID: ${effort.activity.id}, Athlete ID: ${effort.athlete.id}\n`;
     details += `   - Segment ID: ${effort.segment.id}\n`;
-    details += `   - Date: ${new Date(effort.start_date_local).toLocaleString()}\n`;
+    details += `   - Date: ${effort.start_date ?? 'N/A'}\n`;
     details += `   - Moving Time: ${movingTime}, Elapsed Time: ${elapsedTime}\n`;
     if (effort.distance !== undefined) details += `   - Distance: ${distance}\n`;
     // Remove speed/pace display lines

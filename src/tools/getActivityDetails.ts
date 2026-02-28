@@ -51,7 +51,7 @@ function formatPace(mps: number | null | undefined): string {
 
 // Format activity details (Metric Only)
 function formatActivityDetails(activity: StravaDetailedActivity): string {
-    const date = new Date(activity.start_date_local).toLocaleString();
+    const date = activity.start_date ?? 'N/A';
     const movingTime = formatDuration(activity.moving_time);
     const elapsedTime = formatDuration(activity.elapsed_time);
     const distance = formatDistance(activity.distance);
@@ -59,7 +59,7 @@ function formatActivityDetails(activity: StravaDetailedActivity): string {
     const avgSpeed = formatSpeed(activity.average_speed);
     const maxSpeed = formatSpeed(activity.max_speed);
     const avgPace = formatPace(activity.average_speed); // Calculate pace from speed
-    
+
     let details = `🏃 **${activity.name}** (ID: ${activity.id})\n`;
     details += `   - Type: ${activity.type} (${activity.sport_type})\n`;
     details += `   - Date: ${date}\n`;
