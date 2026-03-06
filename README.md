@@ -251,6 +251,7 @@ Then point Claude to your local build:
 | "Connect my Strava account" | Links your Strava to Claude |
 | "Check my Strava connection" | Shows connection status |
 | "Get my Strava profile" | Shows your profile info |
+| "What shoes do I have?" | Lists your shoes and usage distance |
 | "What are my training zones?" | Shows HR and power zones |
 
 ### Activities
@@ -382,7 +383,7 @@ The compact format includes comprehensive metadata (units, descriptions, statist
 
 ### API Reference
 
-The server implements the Model Context Protocol (MCP) and exposes 24 tools for Strava API v3. See the source code in `src/tools/` for implementation details.
+The server implements the Model Context Protocol (MCP) and exposes 25 tools for Strava API v3. See the source code in `src/tools/` for implementation details.
 
 ### Contributing
 
