@@ -29,6 +29,7 @@ import { getAllActivities } from './tools/getAllActivities.js';
 import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
 import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
+import { getSegmentLeaderboardTool } from './tools/getSegmentLeaderboard.js';
 import { loadConfig } from './config.js';
 
 // Import the actual client function
@@ -210,6 +211,14 @@ server.tool(
     checkStravaConnectionTool.description,
     {},
     checkStravaConnectionTool.execute
+);
+
+// --- Register segment leaderboard tool ---
+server.tool(
+    getSegmentLeaderboardTool.name,
+    getSegmentLeaderboardTool.description,
+    getSegmentLeaderboardTool.inputSchema?.shape ?? {},
+    getSegmentLeaderboardTool.execute
 );
 
 // --- Helper Functions ---
