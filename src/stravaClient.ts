@@ -1316,3 +1316,81 @@ export async function getActivityPhotos(
         });
     }
 }
+
+// --- Segment Leaderboard ---
+
+export interface StravaLeaderboardEntry {
+    athlete_name: string;
+    elapsed_time: number;
+    moving_time: number;
+    start_date: string;
+    rank: number;
+    average_watts?: number;
+    average_hr?: number;
+}
+
+export interface StravaLeaderboardResponse {
+    effort_count: number;
+    entry_count: number;
+    entries: StravaLeaderboardEntry[];
+}
+
+export interface SegmentLeaderboardParams {
+    gender?: 'M' | 'F';
+    age_group?: string;
+    weight_class?: string;
+    following?: boolean;
+    club_id?: number;
+    date_range?: string;
+    per_page?: number;
+    page?: number;
+}
+
+/**
+ * Fetches the leaderboard for a specific segment.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param segmentId - The ID of the segment.
+ * @param params - Optional filtering parameters.
+ * @returns A promise that resolves to the leaderboard response.
+ * @throws Throws an error if the API request fails.
+ */
+export async function getSegmentLeaderboard(
+    accessToken: string,
+    segmentId: number,
+    params: SegmentLeaderboardParams = {}
+): Promise<StravaLeaderboardResponse> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+    if (!segmentId) {
+        throw new Error("Segment ID is required.");
+    }
+
+    const queryParams: Record<string, any> = {};
+    if (params.per_page) queryParams.per_page = params.per_page;
+    if (params.page) queryParams.page = params.page;
+    if (params.gender) queryParams.gender = params.gender;
+    if (params.age_group) queryParams.age_group = params.age_group;
+    if (params.weight_class) queryParams.weight_class = params.weight_class;
+    if (params.following) queryParams.following = params.following;
+    if (params.club_id) queryParams.club_id = params.club_id;
+    if (params.date_range) queryParams.date_range = params.date_range;
+
+    try {
+        const response = await stravaApi.get<StravaLeaderboardResponse>(
+            `segments/${segmentId}/leaderboard`,
+            {
+                headers: { Authorization: `Bearer ${accessToken}` },
+                params: queryParams
+            }
+        );
+
+        return response.data;
+    } catch (error) {
+        return await handleApiError<StravaLeaderboardResponse>(error, `getSegmentLeaderboard for segment ${segmentId}`, async () => {
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getSegmentLeaderboard(newToken, segmentId, params);
+        });
+    }
+}

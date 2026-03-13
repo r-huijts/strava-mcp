@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { stravaApi } from '../stravaClient.js';
+import {
+    getSegmentLeaderboard as fetchSegmentLeaderboard,
+    StravaLeaderboardResponse
+} from '../stravaClient.js';
 
 const inputSchema = z.object({
     segmentId: z.number().int().positive().describe(
@@ -33,22 +36,7 @@ const inputSchema = z.object({
 
 type GetSegmentLeaderboardParams = z.infer<typeof inputSchema>;
 
-interface LeaderboardEntry {
-    athlete_name: string;
-    elapsed_time: number;
-    moving_time: number;
-    start_date: string;
-    rank: number;
-    average_watts?: number;
-    average_hr?: number;
-}
-
-interface LeaderboardResponse {
-    effort_count: number;
-    entry_count: number;
-    entries: LeaderboardEntry[];
-}
-
+// Helper Functions
 function formatTime(seconds: number): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -58,7 +46,7 @@ function formatTime(seconds: number): string {
     return `${s}s`;
 }
 
-function formatLeaderboard(data: LeaderboardResponse, segmentId: number): string {
+export function formatLeaderboard(data: StravaLeaderboardResponse, segmentId: number): string {
     let output = `🏆 **Segment Leaderboard** (ID: ${segmentId})\n`;
     output += `   Total efforts: ${data.effort_count} | Entries shown: ${data.entry_count}\n\n`;
 
@@ -79,6 +67,7 @@ function formatLeaderboard(data: LeaderboardResponse, segmentId: number): string
     return output;
 }
 
+// Tool definition
 export const getSegmentLeaderboardTool = {
     name: 'get-segment-leaderboard',
     description:
@@ -93,50 +82,39 @@ export const getSegmentLeaderboardTool = {
     inputSchema,
     execute: async ({ segmentId, gender, age_group, weight_class, following = false, club_id, date_range, per_page = 10, page = 1 }: GetSegmentLeaderboardParams) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
+
         if (!token) {
+            console.error("Missing STRAVA_ACCESS_TOKEN environment variable.");
             return {
-                content: [{ type: 'text' as const, text: '❌ Missing STRAVA_ACCESS_TOKEN in .env' }],
+                content: [{ type: 'text' as const, text: 'Configuration error: Missing Strava access token.' }],
                 isError: true
             };
         }
 
         try {
-            stravaApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-            const params: Record<string, any> = {
-                per_page,
-                page
-            };
-            if (gender) params.gender = gender;
-            if (age_group) params.age_group = age_group;
-            if (weight_class) params.weight_class = weight_class;
-            if (following) params.following = following;
-            if (club_id) params.club_id = club_id;
-            if (date_range) params.date_range = date_range;
-
-            const response = await stravaApi.get<LeaderboardResponse>(
-                `/segments/${segmentId}/leaderboard`,
-                { params }
-            );
-
-            const leaderboard = response.data;
+            console.error(`Fetching leaderboard for segment ID: ${segmentId}...`);
+            const leaderboard = await fetchSegmentLeaderboard(token, segmentId, {
+                gender, age_group, weight_class, following, club_id, date_range, per_page, page
+            });
             const formatted = formatLeaderboard(leaderboard, segmentId);
 
-            return {
-                content: [{ type: 'text' as const, text: formatted }]
-            };
-        } catch (error: any) {
-            const statusCode = error.response?.status;
-            const errorMessage = error.response?.data?.message || error.message;
+            console.error(`Successfully fetched leaderboard for segment ${segmentId} (${leaderboard.entry_count} entries)`);
+            return { content: [{ type: 'text' as const, text: formatted }] };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error fetching segment leaderboard ${segmentId}: ${errorMessage}`);
 
-            let userFriendlyError = `❌ Failed to fetch segment leaderboard (${statusCode}): ${errorMessage}\n\n`;
-            userFriendlyError += 'This could be because:\n';
-            userFriendlyError += '1. The segment ID is invalid\n';
-            userFriendlyError += '2. You don\'t have permission to view this segment\n';
-            userFriendlyError += '3. The segment is private or hazardous';
+            let userFriendlyMessage;
+            if (errorMessage.includes("Record Not Found") || errorMessage.includes("404")) {
+                userFriendlyMessage = `Segment with ID ${segmentId} not found.`;
+            } else if (errorMessage.includes("SUBSCRIPTION_REQUIRED")) {
+                userFriendlyMessage = `🔒 Accessing this segment leaderboard (ID: ${segmentId}) requires a Strava subscription.`;
+            } else {
+                userFriendlyMessage = `An unexpected error occurred while fetching leaderboard for segment ${segmentId}. Details: ${errorMessage}`;
+            }
 
             return {
-                content: [{ type: 'text' as const, text: userFriendlyError }],
+                content: [{ type: 'text' as const, text: `❌ ${userFriendlyMessage}` }],
                 isError: true
             };
         }
