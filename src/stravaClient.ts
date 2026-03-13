@@ -1319,21 +1319,24 @@ export async function getActivityPhotos(
 
 // --- Segment Leaderboard ---
 
-export interface StravaLeaderboardEntry {
-    athlete_name: string;
-    elapsed_time: number;
-    moving_time: number;
-    start_date: string;
-    rank: number;
-    average_watts?: number;
-    average_hr?: number;
-}
+const LeaderboardEntrySchema = z.object({
+    athlete_name: z.string(),
+    elapsed_time: z.number(),
+    moving_time: z.number(),
+    start_date: z.string(),
+    rank: z.number(),
+    average_watts: z.number().optional(),
+    average_hr: z.number().optional()
+}).passthrough();
 
-export interface StravaLeaderboardResponse {
-    effort_count: number;
-    entry_count: number;
-    entries: StravaLeaderboardEntry[];
-}
+const LeaderboardResponseSchema = z.object({
+    effort_count: z.number(),
+    entry_count: z.number(),
+    entries: z.array(LeaderboardEntrySchema)
+}).passthrough();
+
+export type StravaLeaderboardEntry = z.infer<typeof LeaderboardEntrySchema>;
+export type StravaLeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
 
 export interface SegmentLeaderboardParams {
     gender?: 'M' | 'F';
@@ -1353,7 +1356,7 @@ export interface SegmentLeaderboardParams {
  * @param segmentId - The ID of the segment.
  * @param params - Optional filtering parameters.
  * @returns A promise that resolves to the leaderboard response.
- * @throws Throws an error if the API request fails.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
  */
 export async function getSegmentLeaderboard(
     accessToken: string,
@@ -1368,8 +1371,8 @@ export async function getSegmentLeaderboard(
     }
 
     const queryParams: Record<string, any> = {};
-    if (params.per_page) queryParams.per_page = params.per_page;
-    if (params.page) queryParams.page = params.page;
+    if (params.per_page != null) queryParams.per_page = params.per_page;
+    if (params.page != null) queryParams.page = params.page;
     if (params.gender) queryParams.gender = params.gender;
     if (params.age_group) queryParams.age_group = params.age_group;
     if (params.weight_class) queryParams.weight_class = params.weight_class;
@@ -1378,7 +1381,7 @@ export async function getSegmentLeaderboard(
     if (params.date_range) queryParams.date_range = params.date_range;
 
     try {
-        const response = await stravaApi.get<StravaLeaderboardResponse>(
+        const response = await stravaApi.get<unknown>(
             `segments/${segmentId}/leaderboard`,
             {
                 headers: { Authorization: `Bearer ${accessToken}` },
@@ -1386,7 +1389,13 @@ export async function getSegmentLeaderboard(
             }
         );
 
-        return response.data;
+        const validationResult = LeaderboardResponseSchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (getSegmentLeaderboard: ${segmentId}):`, validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+        return validationResult.data;
     } catch (error) {
         return await handleApiError<StravaLeaderboardResponse>(error, `getSegmentLeaderboard for segment ${segmentId}`, async () => {
             const newToken = process.env.STRAVA_ACCESS_TOKEN!;

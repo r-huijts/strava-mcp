@@ -51,6 +51,12 @@ describe('formatLeaderboard', () => {
         expect(result).toContain('No entries found');
         expect(result).not.toContain('| Rank |');
     });
+
+    it('shows actual entries.length not entry_count for "Entries shown"', () => {
+        const result = formatLeaderboard(mockLeaderboard, 1);
+        // mockLeaderboard has 3 entries
+        expect(result).toContain('Entries shown: 3');
+    });
 });
 
 describe('getSegmentLeaderboardTool', () => {
@@ -105,7 +111,7 @@ describe('getSegmentLeaderboardTool', () => {
         );
     });
 
-    it('handles API errors gracefully', async () => {
+    it('handles 404 errors gracefully', async () => {
         vi.spyOn(stravaApi, 'get').mockRejectedValue(new Error('Record Not Found (404)'));
 
         const result = await getSegmentLeaderboardTool.execute({
@@ -114,5 +120,18 @@ describe('getSegmentLeaderboardTool', () => {
 
         expect(result.isError).toBe(true);
         expect(result.content[0].text).toContain('not found');
+    });
+
+    it('handles subscription required errors', async () => {
+        vi.spyOn(stravaApi, 'get').mockRejectedValue(
+            new Error('SUBSCRIPTION_REQUIRED: This endpoint requires a Strava subscription')
+        );
+
+        const result = await getSegmentLeaderboardTool.execute({
+            segmentId: 12345, following: false, per_page: 10, page: 1
+        });
+
+        expect(result.isError).toBe(true);
+        expect(result.content[0].text).toContain('requires a Strava subscription');
     });
 });

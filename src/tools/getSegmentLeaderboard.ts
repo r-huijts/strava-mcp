@@ -4,7 +4,7 @@ import {
     StravaLeaderboardResponse
 } from '../stravaClient.js';
 
-const inputSchema = z.object({
+export const inputSchema = z.object({
     segmentId: z.number().int().positive().describe(
         'The unique identifier of the segment to fetch the leaderboard for.'
     ),
@@ -48,7 +48,7 @@ function formatTime(seconds: number): string {
 
 export function formatLeaderboard(data: StravaLeaderboardResponse, segmentId: number): string {
     let output = `🏆 **Segment Leaderboard** (ID: ${segmentId})\n`;
-    output += `   Total efforts: ${data.effort_count} | Entries shown: ${data.entry_count}\n\n`;
+    output += `   Total efforts: ${data.effort_count} | Entries shown: ${data.entries.length}\n\n`;
 
     if (data.entries.length === 0) {
         output += '   No entries found for the given filters.\n';
@@ -105,10 +105,10 @@ export const getSegmentLeaderboardTool = {
             console.error(`Error fetching segment leaderboard ${segmentId}: ${errorMessage}`);
 
             let userFriendlyMessage;
-            if (errorMessage.includes("Record Not Found") || errorMessage.includes("404")) {
+            if (errorMessage.startsWith("SUBSCRIPTION_REQUIRED:")) {
+                userFriendlyMessage = `🔒 Accessing this segment leaderboard (ID: ${segmentId}) requires a Strava subscription. Please check your subscription status.`;
+            } else if (errorMessage.includes("Record Not Found") || errorMessage.includes("404")) {
                 userFriendlyMessage = `Segment with ID ${segmentId} not found.`;
-            } else if (errorMessage.includes("SUBSCRIPTION_REQUIRED")) {
-                userFriendlyMessage = `🔒 Accessing this segment leaderboard (ID: ${segmentId}) requires a Strava subscription.`;
             } else {
                 userFriendlyMessage = `An unexpected error occurred while fetching leaderboard for segment ${segmentId}. Details: ${errorMessage}`;
             }
