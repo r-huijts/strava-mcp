@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { AxiosError } from "axios";
 import { formatLeaderboard, getSegmentLeaderboardTool } from "../src/tools/getSegmentLeaderboard.js";
 import { stravaApi } from "../src/stravaClient.js";
 
@@ -123,9 +124,17 @@ describe('getSegmentLeaderboardTool', () => {
     });
 
     it('handles subscription required errors', async () => {
-        vi.spyOn(stravaApi, 'get').mockRejectedValue(
-            new Error('SUBSCRIPTION_REQUIRED: This endpoint requires a Strava subscription')
+        // handleApiError checks axios.isAxiosError() + status 402, then throws
+        // "SUBSCRIPTION_REQUIRED: ..." which the tool matches with startsWith()
+        const axiosError = new AxiosError(
+            'Request failed with status code 402',
+            'ERR_BAD_RESPONSE',
+            undefined,
+            undefined,
+            { status: 402, data: { message: 'Payment Required' }, headers: {}, config: {}, statusText: 'Payment Required' } as any
         );
+
+        vi.spyOn(stravaApi, 'get').mockRejectedValue(axiosError);
 
         const result = await getSegmentLeaderboardTool.execute({
             segmentId: 12345, following: false, per_page: 10, page: 1
