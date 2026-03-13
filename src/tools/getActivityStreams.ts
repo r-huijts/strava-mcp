@@ -372,8 +372,10 @@ export const getActivityStreamsTool = {
         '- Use max_points parameter to downsample very large activities intelligently',
     inputSchema,
     execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution: rawResolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only = false }: GetActivityStreamsParams) => {
-        // Default resolution to 'low' for LLM-friendly payloads (issue #14)
-        // Applied here rather than in Zod schema so the API param is only sent when a value is set
+        // Default resolution to 'low' for LLM-friendly payloads (issue #14).
+        // This intentionally changes prior behavior where omitting resolution returned
+        // the full native resolution (often 'high', ~10000 points), causing slow responses.
+        // Callers who need more data should explicitly pass resolution: 'medium' or 'high'.
         const resolution = rawResolution ?? 'low';
         const token = process.env.STRAVA_ACCESS_TOKEN;
         if (!token) {
@@ -388,8 +390,9 @@ export const getActivityStreamsTool = {
             stravaApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             
             // Build query parameters
+            // Always send resolution to control payload size (defaults to 'low' for issue #14)
             const params: Record<string, any> = {};
-            if (resolution) params.resolution = resolution;
+            params.resolution = resolution;
             if (series_type) params.series_type = series_type;
 
             // Convert query params to string
