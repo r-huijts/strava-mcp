@@ -540,4 +540,40 @@ describe('summary_only parameter', () => {
         expect(parsed.data).toBeDefined();
         expect(parsed.data.heartrate).toBeDefined();
     });
+
+    it('reports stats on original data, not downsampled', async () => {
+        // Create data where downsampling would change min/max
+        const hrData = Array.from({ length: 500 }, (_, i) => 120 + i); // max = 619
+        const mockStreams = [createMockStream('heartrate', hrData)];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({
+            id: 123, summary_only: true, max_points: 50
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        // Stats should reflect full 500-point dataset, not the 50-point downsampled version
+        expect(parsed.statistics.heartrate.total_points).toBe(500);
+        expect(parsed.statistics.heartrate.min).toBe(120);
+        expect(parsed.statistics.heartrate.max).toBe(619);
+    });
+
+    it('handles empty stream data without crashing', async () => {
+        const mockStreams = [createMockStream('heartrate', [])];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({ id: 123, summary_only: true });
+        const parsed = JSON.parse(result.content[0].text);
+
+        // Should not contain -Infinity, Infinity, or NaN
+        expect(parsed.statistics.heartrate.max).toBeUndefined();
+        expect(parsed.statistics.heartrate.min).toBeUndefined();
+        expect(parsed.statistics.heartrate.avg).toBeUndefined();
+    });
 });
