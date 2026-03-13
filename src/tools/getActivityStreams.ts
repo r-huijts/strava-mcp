@@ -31,13 +31,12 @@ export const inputSchema = z.object({
             '- moving: Boolean indicating if moving\n' +
             '- grade_smooth: Road grade as percentage'
         ),
-    resolution: z.enum(RESOLUTION_TYPES).optional()
+    resolution: z.enum(RESOLUTION_TYPES).optional().default('low')
         .describe(
-            'Optional data resolution. Affects number of data points returned:\n' +
-            '- low: ~100 points\n' +
+            'Data resolution. Affects number of data points returned:\n' +
+            '- low: ~100 points (default, recommended for LLM analysis)\n' +
             '- medium: ~1000 points\n' +
-            '- high: ~10000 points\n' +
-            'Default varies based on activity length.'
+            '- high: ~10000 points (warning: very large payload, may cause slowness)'
         ),
     series_type: z.enum(['time', 'distance']).optional()
         .default('distance')
@@ -69,6 +68,11 @@ export const inputSchema = z.object({
         .describe(
             'Maximum number of data points to return. If activity exceeds this, data will be intelligently downsampled ' +
             'while preserving peaks and valleys. Useful for very large activities.'
+        ),
+    summary_only: z.boolean().optional().default(false)
+        .describe(
+            'If true, returns only metadata and statistics (min/max/avg) without raw stream data. ' +
+            'Much faster and smaller response. Ideal for quick activity overviews or when raw data is not needed.'
         )
 });
 
@@ -366,7 +370,7 @@ export const getActivityStreamsTool = {
         '- Large activities are automatically chunked to ~50KB per message\n' +
         '- Use max_points parameter to downsample very large activities intelligently',
     inputSchema,
-    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points }: GetActivityStreamsParams) => {
+    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution = 'low', series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only = false }: GetActivityStreamsParams) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
         if (!token) {
             return {
@@ -466,6 +470,25 @@ export const getActivityStreamsTool = {
                 
                 streamStats[stream.type] = stats;
             });
+
+            // Summary-only mode: return metadata and statistics without raw data
+            if (summary_only) {
+                return {
+                    content: [{
+                        type: 'text' as const,
+                        text: JSON.stringify({
+                            metadata: {
+                                available_types: streams.map(s => s.type),
+                                total_points: totalPoints,
+                                resolution: referenceStream.resolution,
+                                series_type: referenceStream.series_type,
+                                ...(wasDownsampled && { downsampled: true, original_points: originalPoints })
+                            },
+                            statistics: streamStats
+                        }, null, 2)
+                    }]
+                };
+            }
 
             // Special case: return all data in multiple messages if points_per_page is -1
             if (points_per_page === -1) {
