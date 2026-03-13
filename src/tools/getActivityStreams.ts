@@ -370,7 +370,7 @@ export const getActivityStreamsTool = {
         '- Large activities are automatically chunked to ~50KB per message\n' +
         '- Use max_points parameter to downsample very large activities intelligently',
     inputSchema,
-    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution = 'low', series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only = false }: GetActivityStreamsParams) => {
+    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only }: GetActivityStreamsParams) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
         if (!token) {
             return {

@@ -473,3 +473,71 @@ describe('max_points parameter', () => {
         expect(downsampledData.length).toBeLessThanOrEqual(100);
     });
 });
+
+describe('summary_only parameter', () => {
+    beforeEach(() => {
+        process.env.STRAVA_ACCESS_TOKEN = 'test-token';
+        stravaApi.defaults = {
+            headers: {
+                common: {}
+            }
+        } as any;
+    });
+
+    it('returns metadata and statistics without raw data', async () => {
+        const mockStreams = [
+            createMockStream('heartrate', [120, 130, 140, 150, 160]),
+            createMockStream('watts', [200, 220, 240, 260, 280])
+        ];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({ id: 123, summary_only: true });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.metadata).toBeDefined();
+        expect(parsed.statistics).toBeDefined();
+        expect(parsed.data).toBeUndefined();
+        expect(parsed.metadata.available_types).toContain('heartrate');
+        expect(parsed.metadata.available_types).toContain('watts');
+    });
+
+    it('statistics match the non-summary version', async () => {
+        const mockStreams = [
+            createMockStream('heartrate', [120, 130, 140, 150, 160])
+        ];
+
+        const mockGet = vi.spyOn(stravaApi, 'get');
+        mockGet.mockResolvedValue({ data: mockStreams } as any);
+
+        const summaryResult = await getActivityStreamsTool.execute({ id: 123, summary_only: true });
+        mockGet.mockClear();
+        mockGet.mockResolvedValue({ data: mockStreams } as any);
+        const fullResult = await getActivityStreamsTool.execute({ id: 123, summary_only: false });
+
+        const summaryStats = JSON.parse(summaryResult.content[0].text).statistics;
+        const fullStats = JSON.parse(fullResult.content[0].text).statistics;
+
+        expect(summaryStats.heartrate.min).toBe(fullStats.heartrate.min);
+        expect(summaryStats.heartrate.max).toBe(fullStats.heartrate.max);
+        expect(summaryStats.heartrate.avg).toBe(fullStats.heartrate.avg);
+    });
+
+    it('defaults to false (returns full data)', async () => {
+        const mockStreams = [
+            createMockStream('heartrate', [120, 125, 130])
+        ];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({ id: 123 });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.data).toBeDefined();
+        expect(parsed.data.heartrate).toBeDefined();
+    });
+});
