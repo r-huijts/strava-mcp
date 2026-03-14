@@ -25,6 +25,7 @@ import { exportRouteTcx } from './tools/exportRouteTcx.js';
 import { getActivityStreamsTool } from './tools/getActivityStreams.js';
 import { getActivityLapsTool } from './tools/getActivityLaps.js';
 import { getAthleteZonesTool } from './tools/getAthleteZones.js';
+import { getAthleteShoesTool } from './tools/getAthleteShoes.js';
 import { getAllActivities } from './tools/getAllActivities.js';
 import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
@@ -167,6 +168,14 @@ server.tool(
     getAthleteZonesTool.description,
     getAthleteZonesTool.inputSchema?.shape ?? {},
     getAthleteZonesTool.execute
+);
+
+// --- Register get-athlete-shoes tool ---
+server.tool(
+    getAthleteShoesTool.name,
+    getAthleteShoesTool.description,
+    {},
+    getAthleteShoesTool.execute
 );
 
 // --- Register get-all-activities tool ---

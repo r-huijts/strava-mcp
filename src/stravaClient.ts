@@ -61,6 +61,21 @@ const DetailedAthleteSchema = BaseAthleteSchema.extend({
     profile: z.string().url(),
     weight: z.number().nullable(),
     measurement_preference: z.enum(["feet", "meters"]).optional().nullable(),
+    bikes: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        primary: z.boolean().optional(),
+        resource_state: z.number().int().optional(),
+        distance: z.number().optional(),
+    })).optional().nullable(),
+    shoes: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        primary: z.boolean().optional(),
+        resource_state: z.number().int().optional(),
+        distance: z.number().optional(),
+        converted_distance: z.number().optional(),
+    })).optional().nullable(),
     // Add other fields as needed (e.g., follower_count, friend_count, ftp, clubs, bikes, shoes)
 });
 
