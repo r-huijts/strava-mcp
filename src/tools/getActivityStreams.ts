@@ -33,11 +33,11 @@ export const inputSchema = z.object({
         ),
     resolution: z.enum(RESOLUTION_TYPES).optional()
         .describe(
-            'Optional data resolution. Affects number of data points returned:\n' +
-            '- low: ~100 points\n' +
+            'Data resolution. Affects number of data points returned:\n' +
+            '- low: ~100 points (recommended for LLM analysis)\n' +
             '- medium: ~1000 points\n' +
-            '- high: ~10000 points\n' +
-            'Default varies based on activity length.'
+            '- high: ~10000 points (warning: very large payload, may cause slowness)\n' +
+            'Defaults to "low" when omitted. Pass explicitly if you need more data.'
         ),
     series_type: z.enum(['time', 'distance']).optional()
         .default('distance')
@@ -69,6 +69,11 @@ export const inputSchema = z.object({
         .describe(
             'Maximum number of data points to return. If activity exceeds this, data will be intelligently downsampled ' +
             'while preserving peaks and valleys. Useful for very large activities.'
+        ),
+    summary_only: z.boolean().optional().default(false)
+        .describe(
+            'If true, returns only metadata and statistics (min/max/avg) without raw stream data. ' +
+            'Much faster and smaller response. Ideal for quick activity overviews or when raw data is not needed.'
         )
 });
 
@@ -366,7 +371,12 @@ export const getActivityStreamsTool = {
         '- Large activities are automatically chunked to ~50KB per message\n' +
         '- Use max_points parameter to downsample very large activities intelligently',
     inputSchema,
-    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points }: GetActivityStreamsParams) => {
+    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution: rawResolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only = false }: GetActivityStreamsParams) => {
+        // Default resolution to 'low' for LLM-friendly payloads (issue #14).
+        // This intentionally changes prior behavior where omitting resolution returned
+        // the full native resolution (often 'high', ~10000 points), causing slow responses.
+        // Callers who need more data should explicitly pass resolution: 'medium' or 'high'.
+        const resolution = rawResolution ?? 'low';
         const token = process.env.STRAVA_ACCESS_TOKEN;
         if (!token) {
             return {
@@ -380,8 +390,9 @@ export const getActivityStreamsTool = {
             stravaApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             
             // Build query parameters
+            // Always send resolution to control payload size (defaults to 'low' for issue #14)
             const params: Record<string, any> = {};
-            if (resolution) params.resolution = resolution;
+            params.resolution = resolution;
             if (series_type) params.series_type = series_type;
 
             // Convert query params to string
@@ -412,6 +423,78 @@ export const getActivityStreamsTool = {
             let wasDownsampled = false;
             let originalPoints = totalPoints;
 
+            // Generate stream statistics on the ORIGINAL data (before downsampling)
+            // so that summary_only mode always reflects the full activity
+            const streamStats: Record<string, any> = {};
+            streams.forEach(stream => {
+                const data = stream.data;
+                let stats: any = {
+                    total_points: data.length,
+                    resolution: stream.resolution,
+                    series_type: stream.series_type
+                };
+
+                // Add type-specific statistics (guard against empty arrays)
+                switch (stream.type) {
+                    case 'heartrate':
+                        const hrData = data as number[];
+                        if (hrData.length > 0) {
+                            stats = {
+                                ...stats,
+                                max: Math.max(...hrData),
+                                min: Math.min(...hrData),
+                                avg: Math.round(hrData.reduce((a, b) => a + b, 0) / hrData.length)
+                            };
+                        }
+                        break;
+                    case 'watts':
+                        const powerData = data as number[];
+                        if (powerData.length > 0) {
+                            stats = {
+                                ...stats,
+                                max: Math.max(...powerData),
+                                avg: Math.round(powerData.reduce((a, b) => a + b, 0) / powerData.length),
+                                normalized_power: calculateNormalizedPower(powerData)
+                            };
+                        }
+                        break;
+                    case 'velocity_smooth':
+                        const velocityData = data as number[];
+                        if (velocityData.length > 0) {
+                            stats = {
+                                ...stats,
+                                max_kph: Math.round(Math.max(...velocityData) * 3.6 * 10) / 10,
+                                avg_kph: Math.round(velocityData.reduce((a, b) => a + b, 0) / velocityData.length * 3.6 * 10) / 10
+                            };
+                        }
+                        break;
+                }
+
+                streamStats[stream.type] = stats;
+            });
+
+            // Summary-only mode: return metadata and statistics without raw data
+            // This runs BEFORE downsampling so stats reflect the full activity
+            if (summary_only) {
+                const jsonArgs: [any, any, any] = format === 'compact'
+                    ? [null, undefined, undefined]
+                    : [null, null, 2];
+                return {
+                    content: [{
+                        type: 'text' as const,
+                        text: JSON.stringify({
+                            metadata: {
+                                available_types: streams.map(s => s.type),
+                                total_points: totalPoints,
+                                resolution: referenceStream.resolution,
+                                series_type: referenceStream.series_type
+                            },
+                            statistics: streamStats
+                        }, jsonArgs[1], jsonArgs[2])
+                    }]
+                };
+            }
+
             // Apply downsampling if max_points is specified
             if (max_points && totalPoints > max_points) {
                 originalPoints = totalPoints;
@@ -423,49 +506,6 @@ export const getActivityStreamsTool = {
                 totalPoints = referenceStream.data.length;
                 wasDownsampled = true;
             }
-
-            // Generate stream statistics first (they're always included)
-            const streamStats: Record<string, any> = {};
-            streams.forEach(stream => {
-                const data = stream.data;
-                let stats: any = {
-                    total_points: data.length,
-                    resolution: stream.resolution,
-                    series_type: stream.series_type
-                };
-
-                // Add type-specific statistics
-                switch (stream.type) {
-                    case 'heartrate':
-                        const hrData = data as number[];
-                        stats = {
-                            ...stats,
-                            max: Math.max(...hrData),
-                            min: Math.min(...hrData),
-                            avg: Math.round(hrData.reduce((a, b) => a + b, 0) / hrData.length)
-                        };
-                        break;
-                    case 'watts':
-                        const powerData = data as number[];
-                        stats = {
-                            ...stats,
-                            max: Math.max(...powerData),
-                            avg: Math.round(powerData.reduce((a, b) => a + b, 0) / powerData.length),
-                            normalized_power: calculateNormalizedPower(powerData)
-                        };
-                        break;
-                    case 'velocity_smooth':
-                        const velocityData = data as number[];
-                        stats = {
-                            ...stats,
-                            max_kph: Math.round(Math.max(...velocityData) * 3.6 * 10) / 10,
-                            avg_kph: Math.round(velocityData.reduce((a, b) => a + b, 0) / velocityData.length * 3.6 * 10) / 10
-                        };
-                        break;
-                }
-                
-                streamStats[stream.type] = stats;
-            });
 
             // Special case: return all data in multiple messages if points_per_page is -1
             if (points_per_page === -1) {

@@ -473,3 +473,107 @@ describe('max_points parameter', () => {
         expect(downsampledData.length).toBeLessThanOrEqual(100);
     });
 });
+
+describe('summary_only parameter', () => {
+    beforeEach(() => {
+        process.env.STRAVA_ACCESS_TOKEN = 'test-token';
+        stravaApi.defaults = {
+            headers: {
+                common: {}
+            }
+        } as any;
+    });
+
+    it('returns metadata and statistics without raw data', async () => {
+        const mockStreams = [
+            createMockStream('heartrate', [120, 130, 140, 150, 160]),
+            createMockStream('watts', [200, 220, 240, 260, 280])
+        ];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({ id: 123, summary_only: true });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.metadata).toBeDefined();
+        expect(parsed.statistics).toBeDefined();
+        expect(parsed.data).toBeUndefined();
+        expect(parsed.metadata.available_types).toContain('heartrate');
+        expect(parsed.metadata.available_types).toContain('watts');
+    });
+
+    it('statistics match the non-summary version', async () => {
+        const mockStreams = [
+            createMockStream('heartrate', [120, 130, 140, 150, 160])
+        ];
+
+        const mockGet = vi.spyOn(stravaApi, 'get');
+        mockGet.mockResolvedValue({ data: mockStreams } as any);
+
+        const summaryResult = await getActivityStreamsTool.execute({ id: 123, summary_only: true });
+        mockGet.mockClear();
+        mockGet.mockResolvedValue({ data: mockStreams } as any);
+        const fullResult = await getActivityStreamsTool.execute({ id: 123, summary_only: false });
+
+        const summaryStats = JSON.parse(summaryResult.content[0].text).statistics;
+        const fullStats = JSON.parse(fullResult.content[0].text).statistics;
+
+        expect(summaryStats.heartrate.min).toBe(fullStats.heartrate.min);
+        expect(summaryStats.heartrate.max).toBe(fullStats.heartrate.max);
+        expect(summaryStats.heartrate.avg).toBe(fullStats.heartrate.avg);
+    });
+
+    it('defaults to false (returns full data)', async () => {
+        const mockStreams = [
+            createMockStream('heartrate', [120, 125, 130])
+        ];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({ id: 123 });
+        const parsed = JSON.parse(result.content[0].text);
+
+        expect(parsed.data).toBeDefined();
+        expect(parsed.data.heartrate).toBeDefined();
+    });
+
+    it('reports stats on original data, not downsampled', async () => {
+        // Create data where downsampling would change min/max
+        const hrData = Array.from({ length: 500 }, (_, i) => 120 + i); // max = 619
+        const mockStreams = [createMockStream('heartrate', hrData)];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({
+            id: 123, summary_only: true, max_points: 50
+        });
+        const parsed = JSON.parse(result.content[0].text);
+
+        // Stats should reflect full 500-point dataset, not the 50-point downsampled version
+        expect(parsed.statistics.heartrate.total_points).toBe(500);
+        expect(parsed.statistics.heartrate.min).toBe(120);
+        expect(parsed.statistics.heartrate.max).toBe(619);
+    });
+
+    it('handles empty stream data without crashing', async () => {
+        const mockStreams = [createMockStream('heartrate', [])];
+
+        vi.spyOn(stravaApi, 'get').mockResolvedValue({
+            data: mockStreams
+        } as any);
+
+        const result = await getActivityStreamsTool.execute({ id: 123, summary_only: true });
+        const parsed = JSON.parse(result.content[0].text);
+
+        // Should not contain -Infinity, Infinity, or NaN
+        expect(parsed.statistics.heartrate.max).toBeUndefined();
+        expect(parsed.statistics.heartrate.min).toBeUndefined();
+        expect(parsed.statistics.heartrate.avg).toBeUndefined();
+    });
+});
