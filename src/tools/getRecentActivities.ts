@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getRecentActivities as fetchActivities } from "../stravaClient.js";
+import { getRecentActivities as fetchActivities, getAuthenticatedAthlete } from "../stravaClient.js";
 // Reverted SDK type imports
 
 const GetRecentActivitiesInputSchema = z.object({
@@ -32,6 +32,7 @@ export const getRecentActivities = {
 
       try {
         console.error(`Fetching ${perPage} recent activities...`);
+        const athlete = await getAuthenticatedAthlete(token);
         const activities = await fetchActivities(token, perPage);
         console.error(`Successfully fetched ${activities?.length ?? 0} activities.`);
 
@@ -41,10 +42,13 @@ export const getRecentActivities = {
             };
         }
 
+        const distanceFactor = athlete.measurement_preference === 'feet' ? 0.000621371 : 0.001;
+        const distanceUnit = athlete.measurement_preference === 'feet' ? 'mi' : 'km';
+
         // Map to content items with literal type
         const contentItems = activities.map(activity => {
           const dateStr = activity.start_date ? new Date(activity.start_date).toLocaleDateString() : 'N/A';
-          const distanceStr = activity.distance ? `${activity.distance}m` : 'N/A';
+          const distanceStr = activity.distance ? `${(activity.distance * distanceFactor).toFixed(2)} ${distanceUnit}` : 'N/A';
           // Ensure each item conforms to { type: "text", text: string }
           const item: { type: "text", text: string } = {
              type: "text" as const,
