@@ -1,5 +1,6 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
+import { formatLocalDate } from "../formatters.js";
 import {
     listSegmentEfforts as fetchSegmentEfforts,
     // handleApiError, // Removed unused import
@@ -43,7 +44,7 @@ function formatSegmentEffort(effort: StravaDetailedSegmentEffort): string {
     const distance = formatDistance(effort.distance);
 
     // Basic summary: Effort ID, Date, Moving Time, Distance, PR Rank
-    let summary = `⏱️ Effort ID: ${effort.id} (${new Date(effort.start_date_local).toLocaleDateString()})`;
+    let summary = `⏱️ Effort ID: ${effort.id} (${formatLocalDate(effort.start_date_local)})`;
     summary += ` | Time: ${movingTime} (Moving), ${elapsedTime} (Elapsed)`;
     summary += ` | Dist: ${distance}`;
     if (effort.pr_rank !== null) summary += ` | PR Rank: ${effort.pr_rank}`;
