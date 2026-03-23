@@ -1,5 +1,6 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
+import { formatLocalDateTime } from "../formatters.js";
 import {
     getActivityById as fetchActivityById,
     StravaDetailedActivity // Type needed for formatter
@@ -51,7 +52,7 @@ function formatPace(mps: number | null | undefined): string {
 
 // Format activity details (Metric Only)
 function formatActivityDetails(activity: StravaDetailedActivity): string {
-    const date = new Date(activity.start_date_local).toLocaleString();
+    const date = formatLocalDateTime(activity.start_date_local);
     const movingTime = formatDuration(activity.moving_time);
     const elapsedTime = formatDuration(activity.elapsed_time);
     const distance = formatDistance(activity.distance);

@@ -29,7 +29,7 @@ function formatElevation(meters: number | null | undefined): string {
 export function formatRouteSummary(route: StravaRoute): string {
     const distanceKm = metersToKmString(route.distance);
     const elevation = formatElevation(route.elevation_gain);
-    const date = new Date(route.created_at).toLocaleDateString();
+    const date = formatLocalDate(route.created_at);
     const type = route.type === 1 ? 'Ride' : route.type === 2 ? 'Run' : 'Walk'; // Assuming 3 is Walk based on typical Strava usage
 
     let summary = `📍 Route: ${route.name} (#${route.id})\n`;
@@ -41,4 +41,24 @@ export function formatRouteSummary(route: StravaRoute): string {
     return summary;
 }
 
-// Add other shared formatters here as needed (e.g., formatActivity, formatSegment) 
+/**
+ * Formats a local ISO 8601 datetime string (e.g. "2026-03-22T13:48:39")
+ * without going through new Date(), which would reinterpret it in the
+ * server's timezone. Returns a human-readable date+time string.
+ */
+export function formatLocalDateTime(isoString: string): string {
+    const match = isoString.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return isoString;
+    const [, year, month, day, hour, minute] = match;
+    return `${month}/${day}/${year}, ${hour}:${minute}`;
+}
+
+/**
+ * Formats a local ISO 8601 datetime string as a date only (no time).
+ */
+export function formatLocalDate(isoString: string): string {
+    const match = isoString.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return isoString;
+    const [, year, month, day] = match;
+    return `${month}/${day}/${year}`;
+}
