@@ -591,6 +591,47 @@ export async function getAuthenticatedAthlete(accessToken: string): Promise<Stra
 }
 
 /**
+ * Updates the authenticated athlete's weight in kilograms.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param weight - The athlete weight in kilograms.
+ * @returns A promise that resolves to the updated athlete profile.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
+ */
+export async function updateAthleteWeight(accessToken: string, weight: number): Promise<StravaAthlete> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+    if (!Number.isFinite(weight) || weight <= 0) {
+        throw new Error("A valid athlete weight in kilograms is required.");
+    }
+
+    try {
+        const response = await stravaApi.put<unknown>(
+            "athlete",
+            { weight },
+            {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            }
+        );
+
+        const validationResult = DetailedAthleteSchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error("Strava API response validation failed (updateAthleteWeight):", validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+
+        return validationResult.data;
+    } catch (error) {
+        return await handleApiError<StravaAthlete>(error, `updateAthleteWeight to ${weight}kg`, async () => {
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return updateAthleteWeight(newToken, weight);
+        });
+    }
+}
+
+/**
  * Fetches activity statistics for a specific athlete.
  *
  * @param accessToken - The Strava API access token.

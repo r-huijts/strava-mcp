@@ -251,6 +251,7 @@ Then point Claude to your local build:
 | "Connect my Strava account" | Links your Strava to Claude |
 | "Check my Strava connection" | Shows connection status |
 | "Get my Strava profile" | Shows your profile info |
+| "Update my weight to 72.5 kg" | Updates your athlete weight in Strava |
 | "What shoes do I have?" | Lists your shoes and usage distance |
 | "What are my training zones?" | Shows HR and power zones |
 
