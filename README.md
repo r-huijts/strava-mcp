@@ -100,6 +100,10 @@ A browser window will open. Enter your Strava API credentials, authorize the app
 
 ---
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/r-huijts-strava-mcp).
+
 ## Connecting Your Strava Account
 
 ### First Time Setup
