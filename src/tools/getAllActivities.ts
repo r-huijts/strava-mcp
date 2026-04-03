@@ -68,16 +68,8 @@ function formatActivitySummary(activity: any): string {
     const type = activity.sport_type || activity.type || 'Unknown';
     const activityId = activity.id ?? 'N/A';
 
-    let emoji = '🏃';
-    if (type.toLowerCase().includes('ride') || type.toLowerCase().includes('bike')) emoji = '🚴';
-    else if (type.toLowerCase().includes('swim')) emoji = '🏊';
-    else if (type.toLowerCase().includes('ski')) emoji = '⛷️';
-    else if (type.toLowerCase().includes('hike') || type.toLowerCase().includes('walk')) emoji = '🥾';
-    else if (type.toLowerCase().includes('yoga')) emoji = '🧘';
-    else if (type.toLowerCase().includes('weight')) emoji = '💪';
-
     const stravaUrl = activityId !== 'N/A' ? `https://www.strava.com/activities/${activityId}` : '';
-    return `${emoji} ${activity.name} (ID: ${activityId}) - ${type} - ${distance} in ${duration} on ${date}${stravaUrl ? `\n   URL: ${stravaUrl}` : ''}`;
+    return `${type} ${activity.name} (ID: ${activityId}) - ${distance} in ${duration} on ${date}${stravaUrl ? `\n   URL: ${stravaUrl}` : ''}`;
 }
 
 // Helper function to format duration
