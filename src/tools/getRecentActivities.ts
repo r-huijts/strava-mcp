@@ -52,7 +52,7 @@ export const getRecentActivities = {
           // Ensure each item conforms to { type: "text", text: string }
           const item: { type: "text", text: string } = {
              type: "text" as const,
-             text: `🏃 ${activity.name} (ID: ${activity.id ?? 'N/A'}) — ${distanceStr} on ${dateStr}`
+             text: `${activity.type || activity.sport_type} ${activity.name} (ID: ${activity.id ?? 'N/A'}) — ${distanceStr} on ${dateStr}`
             };
           return item;
         });
