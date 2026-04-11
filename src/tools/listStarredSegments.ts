@@ -27,7 +27,7 @@ export const listStarredSegments = {
             console.error(`Successfully fetched ${segments?.length ?? 0} starred segments.`);
 
             if (!segments || segments.length === 0) {
-                return { content: [{ type: "text" as const, text: " MNo starred segments found." }] };
+                return { content: [{ type: "text" as const, text: "No starred segments found." }] };
             }
 
             const distanceFactor = athlete.measurement_preference === 'feet' ? 0.000621371 : 0.001;

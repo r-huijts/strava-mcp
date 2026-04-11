@@ -23,7 +23,7 @@ export const listAthleteClubs = {
             console.error(`Successfully fetched ${clubs?.length ?? 0} clubs.`);
 
             if (!clubs || clubs.length === 0) {
-                return { content: [{ type: "text" as const, text: " MNo clubs found for the athlete." }] };
+                return { content: [{ type: "text" as const, text: "No clubs found for the athlete." }] };
             }
 
             const clubText = clubs.map(club =>

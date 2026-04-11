@@ -38,7 +38,7 @@ export const getRecentActivities = {
 
         if (!activities || activities.length === 0) {
            return {
-             content: [{ type: "text" as const, text: " MNo recent activities found." }]
+             content: [{ type: "text" as const, text: "No recent activities found." }]
             };
         }
 
