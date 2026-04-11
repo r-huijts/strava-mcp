@@ -19,7 +19,6 @@ stravaApi.interceptors.request.use(config => {
     // console.error(`[DEBUG stravaClient] Authorization Header: ${authHeaderLog}` );
     return config;
 }, error => {
-    console.error('[DEBUG stravaClient] Request Error Interceptor:', error);
     return Promise.reject(error);
 });
 // ----------------------------------

@@ -28,6 +28,7 @@
     "lint": "eslint . --ext .ts",
     "setup-auth": "tsx scripts/setup-auth.ts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:api": "RUN_API_TESTS=true vitest run tests/getActivityStreams.api.test.ts",
     "prepublishOnly": "npm run build"
   },
@@ -54,6 +55,7 @@
     "ts-node": "^10.9.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
   }
 }
