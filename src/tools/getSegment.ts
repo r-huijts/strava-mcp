@@ -1,5 +1,6 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 import {
     getSegmentById as fetchSegmentById,
     // handleApiError, // Removed unused import
@@ -8,7 +9,7 @@ import {
 
 // Input schema
 const GetSegmentInputSchema = z.object({
-    segmentId: z.number().int().positive().describe("The unique identifier of the segment to fetch.")
+    segmentId: McpPositiveIntSchema.describe("The unique identifier of the segment to fetch.")
 });
 type GetSegmentInput = z.infer<typeof GetSegmentInputSchema>;
 

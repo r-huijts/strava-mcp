@@ -1,5 +1,6 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 import { formatLocalDateTime } from "../formatters.js";
 import {
     getActivityById as fetchActivityById,
@@ -9,7 +10,7 @@ import {
 
 // Zod schema for input validation
 const GetActivityDetailsInputSchema = z.object({
-    activityId: z.number().int().positive().describe("The unique identifier of the activity to fetch details for.")
+    activityId: McpPositiveIntSchema.describe("The unique identifier of the activity to fetch details for.")
 });
 
 type GetActivityDetailsInput = z.infer<typeof GetActivityDetailsInputSchema>;

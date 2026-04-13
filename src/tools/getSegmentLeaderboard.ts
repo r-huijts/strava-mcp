@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { McpPositiveIntSchema } from '../mcpSchemas.js';
 import {
     getSegmentLeaderboard as fetchSegmentLeaderboard,
     StravaLeaderboardResponse
 } from '../stravaClient.js';
 
 export const inputSchema = z.object({
-    segmentId: z.number().int().positive().describe(
+    segmentId: McpPositiveIntSchema.describe(
         'The unique identifier of the segment to fetch the leaderboard for.'
     ),
     gender: z.enum(['M', 'F']).optional().describe(
