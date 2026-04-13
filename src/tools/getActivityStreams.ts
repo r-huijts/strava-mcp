@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { stravaApi } from '../stravaClient.js';
-import { McpPositiveIntSchema } from '../mcpSchemas.js';
+import { McpPositiveIntSchema, McpBooleanSchema } from '../mcpSchemas.js';
 
 // Define stream types available in Strava API
 const STREAM_TYPES = [
@@ -71,7 +71,7 @@ export const inputSchema = z.object({
             'Maximum number of data points to return. If activity exceeds this, data will be intelligently downsampled ' +
             'while preserving peaks and valleys. Useful for very large activities.'
         ),
-    summary_only: z.boolean().optional().default(false)
+    summary_only: McpBooleanSchema.optional().default(false)
         .describe(
             'If true, returns only metadata and statistics (min/max/avg) without raw stream data. ' +
             'Much faster and smaller response. Ideal for quick activity overviews or when raw data is not needed.'

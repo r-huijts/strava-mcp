@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { McpPositiveIntSchema } from '../mcpSchemas.js';
+import { McpPositiveIntSchema, McpBooleanSchema } from '../mcpSchemas.js';
 import {
     getSegmentLeaderboard as fetchSegmentLeaderboard,
     StravaLeaderboardResponse
@@ -18,7 +18,7 @@ export const inputSchema = z.object({
     weight_class: z.enum(['0_54', '55_64', '65_74', '75_84', '85_94', '95_plus']).optional().describe(
         'Filter by weight class in kg.'
     ),
-    following: z.boolean().optional().default(false).describe(
+    following: McpBooleanSchema.optional().default(false).describe(
         'If true, filter to only athletes the authenticated user follows.'
     ),
     club_id: z.number().int().optional().describe(

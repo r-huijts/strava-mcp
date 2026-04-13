@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { McpBooleanSchema } from '../mcpSchemas.js';
 import { loadConfig, hasValidTokens, hasClientCredentials, getConfigPath } from '../config.js';
 import { startAuthServer, getAuthUrl } from '../auth/server.js';
 import { getAuthenticatedAthlete } from '../stravaClient.js';
@@ -18,7 +19,7 @@ export const connectStravaTool = {
     name: 'connect-strava',
     description: 'Connect your Strava account to enable activity tracking. This will open a browser window for secure authentication. Use this when the user asks to connect, link, or authenticate their Strava account.',
     inputSchema: z.object({
-        force: z.boolean().optional().describe('Force re-authentication even if already connected'),
+        force: McpBooleanSchema.optional().describe('Force re-authentication even if already connected'),
     }),
     execute: async (args: { force?: boolean }): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
         const { force = false } = args;
