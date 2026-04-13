@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getActivityPhotos as getActivityPhotosClient } from "../stravaClient.js";
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 
 const name = "get-activity-photos";
 
@@ -33,7 +34,7 @@ Notes:
 `;
 
 const inputSchema = z.object({
-    id: z.union([z.number(), z.string()]).describe("The identifier of the activity to fetch photos for."),
+    activityId: McpPositiveIntSchema.describe("The identifier of the activity to fetch photos for."),
     size: z.number().int().positive().optional().describe("Optional photo size in pixels (e.g., 100, 600, 2048)."),
 });
 
@@ -43,7 +44,7 @@ export const getActivityPhotosTool = {
     name,
     description,
     inputSchema,
-    execute: async ({ id, size }: GetActivityPhotosInput) => {
+    execute: async ({ activityId, size }: GetActivityPhotosInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
 
         if (!token) {
@@ -55,16 +56,6 @@ export const getActivityPhotosTool = {
         }
 
         try {
-            // Convert id to number if it's a string
-            const activityId = typeof id === 'string' ? parseInt(id, 10) : id;
-
-            if (isNaN(activityId)) {
-                return {
-                    content: [{ type: "text" as const, text: `Invalid activity ID: ${id}` }],
-                    isError: true
-                };
-            }
-
             console.error(`Fetching photos for activity ID: ${activityId}...`);
             const photos = await getActivityPhotosClient(token, activityId, size);
 
@@ -131,10 +122,10 @@ export const getActivityPhotosTool = {
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`Error fetching photos for activity ${id}: ${errorMessage}`);
+            console.error(`Error fetching photos for activity ${activityId}: ${errorMessage}`);
             const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
-                ? `Activity with ID ${id} not found.`
-                : `An unexpected error occurred while fetching photos for activity ${id}. Details: ${errorMessage}`;
+                ? `Activity with ID ${activityId} not found.`
+                : `An unexpected error occurred while fetching photos for activity ${activityId}. Details: ${errorMessage}`;
             return {
                 content: [{ type: "text" as const, text: `Error: ${userFriendlyMessage}` }],
                 isError: true

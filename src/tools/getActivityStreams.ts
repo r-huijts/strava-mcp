@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { stravaApi } from '../stravaClient.js';
+import { McpPositiveIntSchema } from '../mcpSchemas.js';
 
 // Define stream types available in Strava API
 const STREAM_TYPES = [
@@ -12,7 +13,7 @@ const RESOLUTION_TYPES = ['low', 'medium', 'high'] as const;
 
 // Input schema using Zod
 export const inputSchema = z.object({
-    id: z.number().or(z.string()).describe(
+    activityId: McpPositiveIntSchema.describe(
         'The Strava activity identifier to fetch streams for. This can be obtained from activity URLs or the get-activities tool.'
     ),
     types: z.array(z.enum(STREAM_TYPES))
@@ -371,7 +372,7 @@ export const getActivityStreamsTool = {
         '- Large activities are automatically chunked to ~50KB per message\n' +
         '- Use max_points parameter to downsample very large activities intelligently',
     inputSchema,
-    execute: async ({ id, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution: rawResolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only = false }: GetActivityStreamsParams) => {
+    execute: async ({ activityId, types = ['time', 'distance', 'heartrate', 'cadence', 'watts'], resolution: rawResolution, series_type, page = 1, points_per_page = 100, format = 'compact', max_points, summary_only = false }: GetActivityStreamsParams) => {
         // Default resolution to 'low' for LLM-friendly payloads (issue #14).
         // This intentionally changes prior behavior where omitting resolution returned
         // the full native resolution (often 'high', ~10000 points), causing slow responses.
@@ -399,7 +400,7 @@ export const getActivityStreamsTool = {
             const queryString = new URLSearchParams(params).toString();
             
             // Build the endpoint URL with types in the path
-            const endpoint = `/activities/${id}/streams/${types.join(',')}${queryString ? '?' + queryString : ''}`;
+            const endpoint = `/activities/${activityId}/streams/${types.join(',')}${queryString ? '?' + queryString : ''}`;
             
             const response = await stravaApi.get<StreamSet>(endpoint);
             let streams = response.data;
