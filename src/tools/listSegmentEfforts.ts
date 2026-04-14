@@ -1,5 +1,6 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 import { formatLocalDate } from "../formatters.js";
 import {
     listSegmentEfforts as fetchSegmentEfforts,
@@ -11,7 +12,7 @@ import {
 
 // Zod schema for input validation
 const ListSegmentEffortsInputSchema = z.object({
-    segmentId: z.number().int().positive().describe("The ID of the segment for which to list efforts."),
+    segmentId: McpPositiveIntSchema.describe("The ID of the segment for which to list efforts."),
     startDateLocal: z.string().datetime({ message: "Invalid start date format. Use ISO 8601." }).optional().describe("Filter efforts starting after this ISO 8601 date-time (optional)."),
     endDateLocal: z.string().datetime({ message: "Invalid end date format. Use ISO 8601." }).optional().describe("Filter efforts ending before this ISO 8601 date-time (optional)."),
     perPage: z.number().int().positive().max(200).optional().default(30).describe("Number of efforts to return per page (default: 30, max: 200).")
