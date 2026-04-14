@@ -21,7 +21,7 @@ export const inputSchema = z.object({
     following: McpBooleanSchema.optional().default(false).describe(
         'If true, filter to only athletes the authenticated user follows.'
     ),
-    club_id: z.number().int().optional().describe(
+    club_id: McpPositiveIntSchema.optional().describe(
         'Filter to only athletes in the specified club.'
     ),
     date_range: z.enum(['this_year', 'this_month', 'this_week', 'today']).optional().describe(

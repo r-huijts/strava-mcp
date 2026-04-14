@@ -13,7 +13,7 @@ Use Cases:
 - Access photo metadata including location and timestamps
 
 Parameters:
-- id (required): The unique identifier of the Strava activity.
+- activityId (required): The unique identifier of the Strava activity.
 - size (optional): Size of photos to return in pixels (e.g., 100, 600, 2048). If not specified, returns all available sizes.
 
 Output Format:
@@ -35,7 +35,7 @@ Notes:
 
 const inputSchema = z.object({
     activityId: McpPositiveIntSchema.describe("The identifier of the activity to fetch photos for."),
-    size: z.number().int().positive().optional().describe("Optional photo size in pixels (e.g., 100, 600, 2048)."),
+    size: McpPositiveIntSchema.optional().describe("Optional photo size in pixels (e.g., 100, 600, 2048)."),
 });
 
 type GetActivityPhotosInput = z.infer<typeof inputSchema>;

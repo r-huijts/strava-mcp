@@ -14,7 +14,7 @@ Use Cases:
 - Extract specific lap metrics for comparison or tracking
 
 Parameters:
-- id (required): The unique identifier of the Strava activity.
+- activityId (required): The unique identifier of the Strava activity.
 
 Output Format:
 Returns both a human-readable summary and complete JSON data for each lap, including:
