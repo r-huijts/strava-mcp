@@ -1,10 +1,10 @@
 {
   "name": "@r-huijts/strava-mcp-server",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "MCP server for Strava API",
   "mcpName": "io.github.r-huijts/strava-mcp",
   "repository": {
-    "type": "git", 
+    "type": "git",
     "url": "https://github.com/r-huijts/strava-mcp"
   },
   "main": "dist/server.js",
@@ -50,6 +50,7 @@
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^8.56.0",
     "ts-node": "^10.9.0",
     "tsx": "^4.7.0",
