@@ -86,7 +86,7 @@ export const getActivityCommentsTool = {
                 ? `Activity with ID ${id} not found.`
                 : `An unexpected error occurred while fetching comments for activity ${id}. Details: ${errorMessage}`;
             return {
-                content: [{ type: "text" as const, text: `${userFriendlyMessage}` }],
+                content: [{ type: "text" as const, text: userFriendlyMessage }],
                 isError: true,
             };
         }

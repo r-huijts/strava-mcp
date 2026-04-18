@@ -156,7 +156,6 @@ describe("getActivityCommentsTool", () => {
 
         expect(result.content).toHaveLength(2);
         expect(result.content[1].text).toContain("Complete Comment Data");
-        const jsonPart = result.content[1].text.replace("\\n\\nComplete Comment Data:\\n", "");
-        expect(jsonPart).toContain('"Great ride!"');
+        expect(result.content[1].text).toContain('"Great ride!"');
     });
 });
