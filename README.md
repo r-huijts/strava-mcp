@@ -264,6 +264,7 @@ Then point Claude to your local build:
 | "Show the laps from my last run" | Lap-by-lap breakdown |
 | "Get heart rate data from my ride" | Time-series workout data (optimized compact format) |
 | "Show photos from my hike" | Activity photos |
+| "Who gave kudos to activity 12345?" | Lists athletes who kudoed an activity |
 
 ### Stats & Progress
 
@@ -383,7 +384,7 @@ The compact format includes comprehensive metadata (units, descriptions, statist
 
 ### API Reference
 
-The server implements the Model Context Protocol (MCP) and exposes 25 tools for Strava API v3. See the source code in `src/tools/` for implementation details.
+The server implements the Model Context Protocol (MCP) and exposes 26 tools for Strava API v3. See the source code in `src/tools/` for implementation details.
 
 ### Contributing
 
