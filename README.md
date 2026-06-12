@@ -250,6 +250,7 @@ Then point Claude to your local build:
 |------------------|--------------|
 | "Connect my Strava account" | Links your Strava to Claude |
 | "Check my Strava connection" | Shows connection status |
+| "Disconnect my Strava account" | Unlinks Strava and clears stored tokens |
 | "Get my Strava profile" | Shows your profile info |
 | "What shoes do I have?" | Lists your shoes and usage distance |
 | "What are my training zones?" | Shows HR and power zones |
@@ -297,6 +298,18 @@ Then point Claude to your local build:
 | What you can ask | What it does |
 |------------------|--------------|
 | "What clubs am I in?" | Lists your Strava clubs |
+
+### Workouts
+
+| What you can ask | What it does |
+|------------------|--------------|
+| "Turn this workout into a Zwift file" | Formats a workout plan into a structured file (currently Zwift `.zwo`) |
+
+### Server
+
+| What you can ask | What it does |
+|------------------|--------------|
+| "What version is the Strava server?" | Shows the MCP server version and metadata |
 
 ---
 
