@@ -82,6 +82,23 @@ const DetailedAthleteSchema = BaseAthleteSchema.extend({
 // Type alias for the inferred athlete type
 export type StravaAthlete = z.infer<typeof DetailedAthleteSchema>;
 
+const SummaryAthleteSchema = BaseAthleteSchema.extend({
+    firstname: z.string().optional(),
+    lastname: z.string().optional(),
+    profile_medium: z.string().url().optional(),
+    profile: z.string().url().optional(),
+}).passthrough();
+export type StravaSummaryAthlete = z.infer<typeof SummaryAthleteSchema>;
+
+const ActivityKudoerSchema = z.object({
+    resource_state: z.number().int(),
+    firstname: z.string().optional(),
+    lastname: z.string().optional(),
+    profile_medium: z.string().url().optional(),
+    profile: z.string().url().optional(),
+}).passthrough();
+export type StravaActivityKudoer = z.infer<typeof ActivityKudoerSchema>;
+
 // --- Stats Schemas ---
 // Schema for individual activity totals (like runs, rides, swims)
 const ActivityTotalSchema = z.object({
@@ -1328,6 +1345,58 @@ export async function getActivityPhotos(
             // Use new token from environment after refresh
             const newToken = process.env.STRAVA_ACCESS_TOKEN!;
             return getActivityPhotos(newToken, activityId, size);
+        });
+    }
+}
+
+// --- Activity Kudoers ---
+
+const StravaActivityKudoersResponseSchema = z.array(ActivityKudoerSchema);
+
+/**
+ * Fetches athletes who gave kudos to a specific activity.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param activityId - The ID of the activity to fetch kudoers for.
+ * @param page - Page number for pagination (default: 1).
+ * @param perPage - Number of kudoers per page (default: 30).
+ * @returns A promise that resolves to an array of athletes who kudoed the activity.
+ * @throws Throws an error if the API request fails or the response format is unexpected.
+ */
+export async function getActivityKudoers(
+    accessToken: string,
+    activityId: number,
+    page: number = 1,
+    perPage: number = 30
+): Promise<StravaActivityKudoer[]> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+    if (!activityId) {
+        throw new Error("Activity ID is required to fetch kudoers.");
+    }
+
+    try {
+        const response = await stravaApi.get<unknown>(`activities/${activityId}/kudos`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: {
+                page,
+                per_page: perPage
+            }
+        });
+
+        const validationResult = StravaActivityKudoersResponseSchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (getActivityKudoers: ${activityId}):`, JSON.stringify(validationResult.error.errors, null, 2));
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+
+        return validationResult.data;
+    } catch (error) {
+        return await handleApiError<StravaActivityKudoer[]>(error, `getActivityKudoers for ID ${activityId}`, async () => {
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getActivityKudoers(newToken, activityId, page, perPage);
         });
     }
 }

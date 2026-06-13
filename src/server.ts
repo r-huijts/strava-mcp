@@ -28,6 +28,7 @@ import { getAthleteZonesTool } from './tools/getAthleteZones.js';
 import { getAthleteShoesTool } from './tools/getAthleteShoes.js';
 import { getAllActivities } from './tools/getAllActivities.js';
 import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
+import { getActivityKudoersTool } from './tools/getActivityKudoers.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
 import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
 import { getSegmentLeaderboardTool } from './tools/getSegmentLeaderboard.js';
@@ -192,6 +193,14 @@ server.tool(
     getActivityPhotosTool.description,
     getActivityPhotosTool.inputSchema?.shape ?? {},
     getActivityPhotosTool.execute
+);
+
+// --- Register get-activity-kudoers tool ---
+server.tool(
+    getActivityKudoersTool.name,
+    getActivityKudoersTool.description,
+    getActivityKudoersTool.inputSchema?.shape ?? {},
+    getActivityKudoersTool.execute
 );
 
 // --- Register get-server-version tool ---
