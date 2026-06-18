@@ -1,5 +1,6 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 import { formatLocalDateTime } from "../formatters.js";
 import {
     StravaDetailedSegmentEffort,
@@ -8,7 +9,7 @@ import {
 // import { formatDuration } from "../server.js"; // Removed, now local
 
 const GetSegmentEffortInputSchema = z.object({
-    effortId: z.number().int().positive().describe("The unique identifier of the segment effort to fetch.")
+    effortId: McpPositiveIntSchema.describe("The unique identifier of the segment effort to fetch.")
 });
 
 type GetSegmentEffortInput = z.infer<typeof GetSegmentEffortInputSchema>;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getActivityLaps as getActivityLapsClient } from "../stravaClient.js";
 import { formatDuration } from "../server.js"; // Import helper
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 
 const name = "get-activity-laps";
 
@@ -13,7 +14,7 @@ Use Cases:
 - Extract specific lap metrics for comparison or tracking
 
 Parameters:
-- id (required): The unique identifier of the Strava activity.
+- activityId (required): The unique identifier of the Strava activity.
 
 Output Format:
 Returns both a human-readable summary and complete JSON data for each lap, including:
@@ -35,7 +36,7 @@ Notes:
 `;
 
 const inputSchema = z.object({
-    id: z.union([z.number(), z.string()]).describe("The identifier of the activity to fetch laps for."),
+    activityId: McpPositiveIntSchema.describe("The identifier of the activity to fetch laps for."),
 });
 
 type GetActivityLapsInput = z.infer<typeof inputSchema>;
@@ -44,7 +45,7 @@ export const getActivityLapsTool = {
     name,
     description,
     inputSchema,
-    execute: async ({ id }: GetActivityLapsInput) => {
+    execute: async ({ activityId }: GetActivityLapsInput) => {
         const token = process.env.STRAVA_ACCESS_TOKEN;
 
         if (!token) {
@@ -56,12 +57,12 @@ export const getActivityLapsTool = {
         }
 
         try {
-            console.error(`Fetching laps for activity ID: ${id}...`);
-            const laps = await getActivityLapsClient(token, id);
+            console.error(`Fetching laps for activity ID: ${activityId}...`);
+            const laps = await getActivityLapsClient(token, activityId);
 
             if (!laps || laps.length === 0) {
                 return {
-                    content: [{ type: "text" as const, text: `✅ No laps found for activity ID: ${id}` }]
+                    content: [{ type: "text" as const, text: `✅ No laps found for activity ID: ${activityId}` }]
                 };
             }
 
@@ -82,12 +83,12 @@ export const getActivityLapsTool = {
                 return details.filter(d => d !== null).join('\n');
             });
 
-            const summaryText = `Activity Laps Summary (ID: ${id}):\n\n${lapSummaries.join('\n\n')}`;
+            const summaryText = `Activity Laps Summary (ID: ${activityId}):\n\n${lapSummaries.join('\n\n')}`;
             
             // Add raw data section
             const rawDataText = `\n\nComplete Lap Data:\n${JSON.stringify(laps, null, 2)}`;
             
-            console.error(`Successfully fetched ${laps.length} laps for activity ${id}`);
+            console.error(`Successfully fetched ${laps.length} laps for activity ${activityId}`);
             
             return {
                 content: [
@@ -97,10 +98,10 @@ export const getActivityLapsTool = {
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`Error fetching laps for activity ${id}: ${errorMessage}`);
+            console.error(`Error fetching laps for activity ${activityId}: ${errorMessage}`);
             const userFriendlyMessage = errorMessage.includes("Record Not Found") || errorMessage.includes("404")
-                ? `Activity with ID ${id} not found.`
-                : `An unexpected error occurred while fetching laps for activity ${id}. Details: ${errorMessage}`;
+                ? `Activity with ID ${activityId} not found.`
+                : `An unexpected error occurred while fetching laps for activity ${activityId}. Details: ${errorMessage}`;
             return {
                 content: [{ type: "text" as const, text: `❌ ${userFriendlyMessage}` }],
                 isError: true

@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { McpPositiveIntSchema } from "../mcpSchemas.js";
 import {
     getAthleteStats as fetchAthleteStats,
     StravaStats
 } from "../stravaClient.js";
 
 const GetAthleteStatsInputSchema = z.object({
-    athleteId: z.number().int().positive().describe("The unique identifier of the athlete to fetch stats for. Obtain this ID first by calling the get-athlete-profile tool.")
+    athleteId: McpPositiveIntSchema.describe("The unique identifier of the athlete to fetch stats for. Obtain this ID first by calling the get-athlete-profile tool.")
 });
 
 type GetAthleteStatsInput = z.infer<typeof GetAthleteStatsInputSchema>;
