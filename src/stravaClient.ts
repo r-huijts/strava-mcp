@@ -880,6 +880,71 @@ export async function starSegment(accessToken: string, segmentId: number, starre
 }
 
 /**
+ * Updates an activity fields (name/description/commute).
+ *
+ * MCP clients often send numeric/boolean values as strings. The tool layer handles the coercion.
+ */
+export async function updateActivity(
+    accessToken: string,
+    activityId: number,
+    payload: {
+        name?: string;
+        description?: string;
+        commute?: boolean;
+    }
+): Promise<StravaDetailedActivity> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+    if (!activityId) {
+        throw new Error("Activity ID is required to update details.");
+    }
+    if (!payload || typeof payload !== "object") {
+        throw new Error("Update payload is required.");
+    }
+
+    const hasAtLeastOneField =
+        Object.prototype.hasOwnProperty.call(payload, "name") ||
+        Object.prototype.hasOwnProperty.call(payload, "description") ||
+        Object.prototype.hasOwnProperty.call(payload, "commute");
+
+    if (!hasAtLeastOneField) {
+        throw new Error("Update payload must contain at least one of: name, description, commute.");
+    }
+
+    try {
+        const response = await stravaApi.put<unknown>(
+            `activities/${activityId}`,
+            payload,
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        const validationResult = DetailedActivitySchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (updateActivity: ${activityId}):`, validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+
+        return validationResult.data;
+    } catch (error) {
+        return await handleApiError<StravaDetailedActivity>(
+            error,
+            `updateActivity for ID ${activityId}`,
+            async () => {
+                const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+                return updateActivity(newToken, activityId, payload);
+            }
+        );
+    }
+}
+
+/**
  * Fetches detailed information about a specific segment effort by its ID.
  *
  * @param accessToken - The Strava API access token.

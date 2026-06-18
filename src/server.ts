@@ -31,6 +31,7 @@ import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
 import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
 import { getSegmentLeaderboardTool } from './tools/getSegmentLeaderboard.js';
+import { updateActivityTool } from './tools/updateActivity.js';
 import { loadConfig } from './config.js';
 
 // Import the actual client function
@@ -192,6 +193,14 @@ server.tool(
     getActivityPhotosTool.description,
     getActivityPhotosTool.inputSchema?.shape ?? {},
     getActivityPhotosTool.execute
+);
+
+// --- Register update-activity tool ---
+server.tool(
+    updateActivityTool.name,
+    updateActivityTool.description,
+    updateActivityTool.inputSchema?.shape ?? {},
+    updateActivityTool.execute
 );
 
 // --- Register get-server-version tool ---

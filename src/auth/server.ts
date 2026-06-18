@@ -6,7 +6,9 @@ import { saveConfig, loadConfig, saveClientCredentials, hasClientCredentials, cl
 
 const PORT = 8111;
 const REDIRECT_URI = `http://localhost:${PORT}/callback`;
-const REQUIRED_SCOPES = 'profile:read_all,activity:read_all,activity:read,profile:write';
+// Used to build the Strava OAuth URL. Keep it aligned with what the MCP tools require.
+// `update-activity` needs `activity:write`.
+const REQUIRED_SCOPES = 'profile:read_all,activity:read_all,activity:read,profile:write,activity:write';
 
 export interface AuthResult {
     success: boolean;
