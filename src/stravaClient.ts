@@ -1418,3 +1418,68 @@ export async function getSegmentLeaderboard(
         });
     }
 }
+
+// --- Comment Schema ---
+// Based on https://developers.strava.com/docs/reference/#api-models-Comment
+const CommentAthleteSchema = z.object({
+    firstname: z.string(),
+    lastname: z.string(),
+});
+
+const CommentSchema = z.object({
+    id: z.number().int(),
+    activity_id: z.number().int(),
+    text: z.string(),
+    athlete: CommentAthleteSchema,
+    created_at: z.string().datetime(),
+    cursor: z.string().optional().nullable(),
+});
+
+export type StravaComment = z.infer<typeof CommentSchema>;
+const StravaCommentsResponseSchema = z.array(CommentSchema);
+
+/**
+ * Fetches comments for a specific activity.
+ *
+ * @param accessToken - The Strava API access token.
+ * @param activityId - The ID of the activity.
+ * @param pageSize - Number of comments per page (default: 30).
+ * @param afterCursor - Cursor for pagination.
+ * @returns A promise that resolves to an array of comments.
+ */
+export async function getActivityComments(
+    accessToken: string,
+    activityId: number | string,
+    pageSize: number = 30,
+    afterCursor?: string
+): Promise<StravaComment[]> {
+    if (!accessToken) {
+        throw new Error("Strava access token is required.");
+    }
+
+    const params: Record<string, any> = {
+        page_size: pageSize,
+    };
+    if (afterCursor) params.after_cursor = afterCursor;
+
+    try {
+        const response = await stravaApi.get<unknown>(`activities/${activityId}/comments`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params,
+        });
+
+        const validationResult = StravaCommentsResponseSchema.safeParse(response.data);
+
+        if (!validationResult.success) {
+            console.error(`Strava API validation failed (getActivityComments: ${activityId}):`, validationResult.error);
+            throw new Error(`Invalid data format received from Strava API: ${validationResult.error.message}`);
+        }
+
+        return validationResult.data;
+    } catch (error) {
+        return await handleApiError<StravaComment[]>(error, `getActivityComments for activity ${activityId}`, async () => {
+            const newToken = process.env.STRAVA_ACCESS_TOKEN!;
+            return getActivityComments(newToken, activityId, pageSize, afterCursor);
+        });
+    }
+}

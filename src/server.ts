@@ -31,6 +31,7 @@ import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
 import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
 import { getSegmentLeaderboardTool } from './tools/getSegmentLeaderboard.js';
+import { getActivityCommentsTool } from './tools/getActivityComments.js';
 import { loadConfig } from './config.js';
 
 // Import the actual client function
@@ -228,6 +229,14 @@ server.tool(
     getSegmentLeaderboardTool.description,
     getSegmentLeaderboardTool.inputSchema?.shape ?? {},
     getSegmentLeaderboardTool.execute
+);
+
+// --- Register get-activity-comments tool ---
+server.tool(
+    getActivityCommentsTool.name,
+    getActivityCommentsTool.description,
+    getActivityCommentsTool.inputSchema?.shape ?? {},
+    getActivityCommentsTool.execute
 );
 
 // --- Helper Functions ---
