@@ -31,6 +31,7 @@ import { getActivityPhotosTool } from './tools/getActivityPhotos.js';
 import { getServerVersionTool } from "./tools/getServerVersion.js";
 import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } from './tools/connectStrava.js';
 import { getSegmentLeaderboardTool } from './tools/getSegmentLeaderboard.js';
+import { updateAthleteWeightTool } from "./tools/updateAthleteWeight.js";
 import { loadConfig } from './config.js';
 
 // Import the actual client function
@@ -228,6 +229,14 @@ server.tool(
     getSegmentLeaderboardTool.description,
     getSegmentLeaderboardTool.inputSchema?.shape ?? {},
     getSegmentLeaderboardTool.execute
+);
+
+// --- Register update-athlete-weight tool ---
+server.tool(
+    updateAthleteWeightTool.name,
+    updateAthleteWeightTool.description,
+    updateAthleteWeightTool.inputSchema?.shape ?? {},
+    updateAthleteWeightTool.execute
 );
 
 // --- Helper Functions ---

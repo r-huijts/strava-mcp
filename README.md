@@ -252,6 +252,7 @@ Then point Claude to your local build:
 | "Check my Strava connection" | Shows connection status |
 | "Disconnect my Strava account" | Unlinks Strava and clears stored tokens |
 | "Get my Strava profile" | Shows your profile info |
+| "Update my weight to 72.5 kg" | Updates your athlete weight in Strava |
 | "What shoes do I have?" | Lists your shoes and usage distance |
 | "What are my training zones?" | Shows HR and power zones |
 
