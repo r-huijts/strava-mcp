@@ -1,4 +1,4 @@
-import { getAuthenticatedAthlete } from "../stravaClient.js";
+import { getLoggedInAthlete } from "../stravaClient.js";
 
 // Export the tool definition directly
 export const getAthleteProfile = {
@@ -19,7 +19,7 @@ export const getAthleteProfile = {
 
       try {
         console.error("Fetching athlete profile...");
-        const athlete = await getAuthenticatedAthlete(token);
+        const athlete = await getLoggedInAthlete(token);
         console.error(`Successfully fetched profile for ${athlete.firstname} ${athlete.lastname} (ID: ${athlete.id}).`);
 
         const profileParts = [

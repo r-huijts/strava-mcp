@@ -31,11 +31,10 @@ describe("get-all-activities tool", () => {
                 maxApiCalls: 1,
                 perPage: 200,
             });
-
             const text = result.content[0]?.text ?? "";
             expect(text).toContain("**Found 1 activities**");
             expect(text).toContain("ID: 1234567890");
-            expect(text).toContain(" - Run - ");
+            expect(text).toContain("Run Test Run");
         } finally {
             process.env.STRAVA_ACCESS_TOKEN = previousToken;
         }

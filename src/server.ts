@@ -33,6 +33,24 @@ import { connectStravaTool, disconnectStravaTool, checkStravaConnectionTool } fr
 import { getSegmentLeaderboardTool } from './tools/getSegmentLeaderboard.js';
 import { loadConfig } from './config.js';
 
+// New tool imports
+import { createActivityTool } from './tools/createActivity.js';
+import { updateActivityTool } from './tools/updateActivity.js';
+import { getActivityCommentsTool } from './tools/getActivityComments.js';
+import { getActivityKudoersTool } from './tools/getActivityKudoers.js';
+import { getActivityZonesTool } from './tools/getActivityZones.js';
+import { updateAthleteTool } from './tools/updateAthlete.js';
+import { getClubTool } from './tools/getClub.js';
+import { listClubActivitiesTool } from './tools/listClubActivities.js';
+import { listClubMembersTool } from './tools/listClubMembers.js';
+import { listClubAdminsTool } from './tools/listClubAdmins.js';
+import { getGearTool } from './tools/getGear.js';
+import { getRouteStreamsTool } from './tools/getRouteStreams.js';
+import { getSegmentEffortStreamsTool } from './tools/getSegmentEffortStreams.js';
+import { getSegmentStreamsTool } from './tools/getSegmentStreams.js';
+import { uploadActivityTool } from './tools/uploadActivity.js';
+import { getUploadStatusTool } from './tools/getUploadStatus.js';
+
 // Import the actual client function
 // import {
 //     // exportRouteGpx as exportRouteGpxClient, // Removed unused alias
@@ -56,179 +74,62 @@ const server = new McpServer({
     version: serverVersion
 });
 
-// Register all tools using server.tool and the correct imported objects
-server.tool(
-    getAthleteProfile.name,
-    getAthleteProfile.description,
-    {},
-    getAthleteProfile.execute
-);
-server.tool(
-    getAthleteStatsTool.name, 
-    getAthleteStatsTool.description,
-    getAthleteStatsTool.inputSchema?.shape ?? {},
-    getAthleteStatsTool.execute
-);
-server.tool(
-    getActivityDetailsTool.name, 
-    getActivityDetailsTool.description,
-    getActivityDetailsTool.inputSchema?.shape ?? {},
-    getActivityDetailsTool.execute
-);
-server.tool(
-    getRecentActivities.name,
-    getRecentActivities.description,
-    getRecentActivities.inputSchema?.shape ?? {},
-    getRecentActivities.execute
-);
-server.tool(
-    listAthleteClubs.name,
-    listAthleteClubs.description,
-    {},
-    listAthleteClubs.execute
-);
-server.tool(
-    listStarredSegments.name,
-    listStarredSegments.description,
-    {},
-    listStarredSegments.execute
-);
-server.tool(
-    getSegmentTool.name, 
-    getSegmentTool.description,
-    getSegmentTool.inputSchema?.shape ?? {},
-    getSegmentTool.execute
-);
-server.tool(
-    exploreSegments.name,
-    exploreSegments.description,
-    exploreSegments.inputSchema?.shape ?? {},
-    exploreSegments.execute
-);
-server.tool(
-    starSegment.name,
-    starSegment.description,
-    starSegment.inputSchema?.shape ?? {},
-    starSegment.execute
-);
-server.tool(
-    getSegmentEffortTool.name, 
-    getSegmentEffortTool.description,
-    getSegmentEffortTool.inputSchema?.shape ?? {},
-    getSegmentEffortTool.execute
-);
-server.tool(
-    listSegmentEffortsTool.name, 
-    listSegmentEffortsTool.description,
-    listSegmentEffortsTool.inputSchema?.shape ?? {},
-    listSegmentEffortsTool.execute
-);
-server.tool(
-    listAthleteRoutesTool.name, 
-    listAthleteRoutesTool.description,
-    listAthleteRoutesTool.inputSchema?.shape ?? {},
-    listAthleteRoutesTool.execute
-);
-server.tool(
-    getRouteTool.name,
-    getRouteTool.description,
-    getRouteTool.inputSchema?.shape ?? {},
-    getRouteTool.execute
-);
-server.tool(
-    exportRouteGpx.name,
-    exportRouteGpx.description,
-    exportRouteGpx.inputSchema?.shape ?? {},
-    exportRouteGpx.execute
-);
-server.tool(
-    exportRouteTcx.name,
-    exportRouteTcx.description,
-    exportRouteTcx.inputSchema?.shape ?? {},
-    exportRouteTcx.execute
-);
-server.tool(
-    getActivityStreamsTool.name,
-    getActivityStreamsTool.description,
-    getActivityStreamsTool.inputSchema?.shape ?? {},
-    getActivityStreamsTool.execute
-);
+// Register all tools using server.registerTool
+const tools: any[] = [
+    getAthleteProfile,
+    getAthleteStatsTool,
+    getActivityDetailsTool,
+    getRecentActivities,
+    listAthleteClubs,
+    listStarredSegments,
+    getSegmentTool,
+    exploreSegments,
+    starSegment,
+    getSegmentEffortTool,
+    listSegmentEffortsTool,
+    listAthleteRoutesTool,
+    getRouteTool,
+    exportRouteGpx,
+    exportRouteTcx,
+    getActivityStreamsTool,
+    getActivityLapsTool,
+    getAthleteZonesTool,
+    getAthleteShoesTool,
+    getAllActivities,
+    getActivityPhotosTool,
+    getServerVersionTool,
+    connectStravaTool,
+    disconnectStravaTool,
+    checkStravaConnectionTool,
+    getSegmentLeaderboardTool,
+    createActivityTool,
+    updateActivityTool,
+    getActivityCommentsTool,
+    getActivityKudoersTool,
+    getActivityZonesTool,
+    updateAthleteTool,
+    getClubTool,
+    listClubActivitiesTool,
+    listClubMembersTool,
+    listClubAdminsTool,
+    getGearTool,
+    getRouteStreamsTool,
+    getSegmentEffortStreamsTool,
+    getSegmentStreamsTool,
+    uploadActivityTool,
+    getUploadStatusTool,
+];
 
-// --- Register get-activity-laps tool (Simplified) ---
-server.tool(
-    getActivityLapsTool.name, 
-    getActivityLapsTool.description,
-    getActivityLapsTool.inputSchema?.shape ?? {},
-    getActivityLapsTool.execute
-);
-
-// --- Register get-athlete-zones tool ---
-server.tool(
-    getAthleteZonesTool.name, 
-    getAthleteZonesTool.description,
-    getAthleteZonesTool.inputSchema?.shape ?? {},
-    getAthleteZonesTool.execute
-);
-
-// --- Register get-athlete-shoes tool ---
-server.tool(
-    getAthleteShoesTool.name,
-    getAthleteShoesTool.description,
-    {},
-    getAthleteShoesTool.execute
-);
-
-// --- Register get-all-activities tool ---
-server.tool(
-    getAllActivities.name,
-    getAllActivities.description,
-    getAllActivities.inputSchema?.shape ?? {},
-    getAllActivities.execute
-);
-
-// --- Register get-activity-photos tool ---
-server.tool(
-    getActivityPhotosTool.name,
-    getActivityPhotosTool.description,
-    getActivityPhotosTool.inputSchema?.shape ?? {},
-    getActivityPhotosTool.execute
-);
-
-// --- Register get-server-version tool ---
-server.tool(
-    getServerVersionTool.name,
-    getServerVersionTool.description,
-    {},
-    getServerVersionTool.execute
-);
-
-// --- Register Strava connection tools ---
-server.tool(
-    connectStravaTool.name,
-    connectStravaTool.description,
-    connectStravaTool.inputSchema?.shape ?? {},
-    connectStravaTool.execute
-);
-server.tool(
-    disconnectStravaTool.name,
-    disconnectStravaTool.description,
-    {},
-    disconnectStravaTool.execute
-);
-server.tool(
-    checkStravaConnectionTool.name,
-    checkStravaConnectionTool.description,
-    {},
-    checkStravaConnectionTool.execute
-);
-
-// --- Register segment leaderboard tool ---
-server.tool(
-    getSegmentLeaderboardTool.name,
-    getSegmentLeaderboardTool.description,
-    getSegmentLeaderboardTool.inputSchema?.shape ?? {},
-    getSegmentLeaderboardTool.execute
-);
+for (const tool of tools) {
+    server.registerTool(
+        tool.name,
+        {
+            description: tool.description,
+            inputSchema: tool.inputSchema
+        },
+        tool.execute as any
+    );
+}
 
 // --- Helper Functions ---
 // Moving formatDuration to utils or keeping it here if broadly used.

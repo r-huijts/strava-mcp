@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { formatLocalDate } from "../formatters.js";
 import {
-    listSegmentEfforts as fetchSegmentEfforts,
+    getEffortsBySegmentId as fetchSegmentEfforts,
     // handleApiError, // Removed unused import
     StravaDetailedSegmentEffort // Type needed for formatter
 } from "../stravaClient.js";

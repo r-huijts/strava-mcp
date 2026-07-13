@@ -1,7 +1,7 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import {
-    listAthleteRoutes as fetchAthleteRoutes,
+    getRoutesByAthleteId as fetchAthleteRoutes,
     StravaRoute,
     // StravaRoute is needed for the formatter
 } from "../stravaClient.js";

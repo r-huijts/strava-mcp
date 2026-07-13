@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getAthleteShoesTool } from "../src/tools/getAthleteShoes.js";
-import { getAuthenticatedAthlete } from "../src/stravaClient.js";
+import { getLoggedInAthlete } from "../src/stravaClient.js";
 
 vi.mock("../src/stravaClient.js", () => ({
-    getAuthenticatedAthlete: vi.fn(),
+    getLoggedInAthlete: vi.fn(),
 }));
 
 describe("get-athlete-shoes tool", () => {
@@ -22,7 +22,7 @@ describe("get-athlete-shoes tool", () => {
 
     it("returns shoes list when athlete has shoes", async () => {
         process.env.STRAVA_ACCESS_TOKEN = "test-token";
-        vi.mocked(getAuthenticatedAthlete).mockResolvedValue({
+        vi.mocked(getLoggedInAthlete).mockResolvedValue({
             id: 1,
             resource_state: 3,
             username: "test",

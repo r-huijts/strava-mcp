@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { exportRouteGpx as fetchGpxData } from "../stravaClient.js";
+import { getRouteAsGPX as fetchGpxData } from "../stravaClient.js";
 // import { McpServerTool } from "@modelcontextprotocol/sdk/server/mcp.js"; // Type doesn't seem exported/needed
 // import { McpResponse } from "@modelcontextprotocol/sdk/server/mcp.js"; // Type doesn't seem exported
 

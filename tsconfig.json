@@ -4,7 +4,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "ES2022", // Target modern Node.js versions
-    "allowJs": true,
+    "allowJs": false,
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "isolatedModules": true,
@@ -15,9 +15,8 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
 
-    /* If NOT transpiling with TypeScript: */
-    "moduleResolution": "Bundler", // Use "NodeNext" or "Bundler" for modern Node.js
-    "module": "ESNext",           // Align with "type": "module" in package.json
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
 
     /* If your code runs in the DOM: */
     // "lib": ["es2022", "dom", "dom.iterable"],

@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { getActivityStreamsTool } from "../src/tools/getActivityStreams.js";
 import { loadConfig } from "../src/config.js";
-import { getRecentActivities } from "../src/stravaClient.js";
+import { getLoggedInAthleteActivities } from "../src/stravaClient.js";
 
 /**
  * Integration tests against the actual Strava API.
@@ -56,7 +56,7 @@ describe('get-activity-streams API Integration', () => {
         } else {
             // Try to fetch a recent activity
             try {
-                const activities = await getRecentActivities(accessToken, 1);
+                const activities = await getLoggedInAthleteActivities(accessToken, 1);
                 if (activities && activities.length > 0) {
                     testActivityId = activities[0].id;
                     console.log(`✓ Fetched activity ID from API: ${testActivityId} (${activities[0].name})`);

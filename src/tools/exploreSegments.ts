@@ -1,7 +1,6 @@
-// import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import {
-    getAuthenticatedAthlete,
+    getLoggedInAthlete,
     exploreSegments as fetchExploreSegments, // Renamed import
     StravaExplorerResponse
 } from "../stravaClient.js";
@@ -45,7 +44,7 @@ export const exploreSegments = {
 
         try {
             console.error(`Exploring segments within bounds: ${bounds}...`);
-            const athlete = await getAuthenticatedAthlete(token);
+            const athlete = await getLoggedInAthlete(token);
             const response: StravaExplorerResponse = await fetchExploreSegments(token, bounds, activityType, minCat, maxCat);
             console.error(`Found ${response.segments?.length ?? 0} segments.`);
 

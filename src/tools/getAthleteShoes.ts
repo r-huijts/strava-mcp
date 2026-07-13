@@ -1,4 +1,4 @@
-import { getAuthenticatedAthlete } from "../stravaClient.js";
+import { getLoggedInAthlete } from "../stravaClient.js";
 
 export const getAthleteShoesTool = {
     name: "get-athlete-shoes",
@@ -17,7 +17,7 @@ export const getAthleteShoesTool = {
 
         try {
             console.error("Fetching athlete shoes...");
-            const athlete = await getAuthenticatedAthlete(token);
+            const athlete = await getLoggedInAthlete(token);
             const shoes = athlete.shoes ?? [];
 
             if (shoes.length === 0) {

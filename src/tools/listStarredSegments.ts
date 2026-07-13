@@ -1,5 +1,5 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
-import { getAuthenticatedAthlete, listStarredSegments as fetchSegments } from "../stravaClient.js"; // Renamed import
+import { getLoggedInAthlete, getLoggedInAthleteStarredSegments as fetchSegments } from "../stravaClient.js"; // Renamed import
 
 // Export the tool definition directly
 export const listStarredSegments = {
@@ -21,7 +21,7 @@ export const listStarredSegments = {
         try {
             console.error("Fetching starred segments...");
             // Need athlete measurement preference for formatting distance
-            const athlete = await getAuthenticatedAthlete(token);
+            const athlete = await getLoggedInAthlete(token);
             // Use renamed import
             const segments = await fetchSegments(token);
             console.error(`Successfully fetched ${segments?.length ?? 0} starred segments.`);

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getRecentActivities as fetchActivities, getAuthenticatedAthlete } from "../stravaClient.js";
+import { getLoggedInAthleteActivities as fetchActivities, getLoggedInAthlete } from "../stravaClient.js";
 // Reverted SDK type imports
 
 const GetRecentActivitiesInputSchema = z.object({
@@ -32,7 +32,7 @@ export const getRecentActivities = {
 
       try {
         console.error(`Fetching ${perPage} recent activities...`);
-        const athlete = await getAuthenticatedAthlete(token);
+        const athlete = await getLoggedInAthlete(token);
         const activities = await fetchActivities(token, perPage);
         console.error(`Successfully fetched ${activities?.length ?? 0} activities.`);
 

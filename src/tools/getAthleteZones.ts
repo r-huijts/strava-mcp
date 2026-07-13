@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getAthleteZones as fetchAthleteZones, StravaAthleteZones } from "../stravaClient.js";
+import { getLoggedInAthleteZones as fetchAthleteZones, StravaAthleteZones } from "../stravaClient.js";
 import { formatDuration } from "../server.js"; // Shared helper
 
 const name = "get-athlete-zones";
