@@ -137,9 +137,9 @@ async function main() {
     }
 
     console.log('\n✅ Successfully obtained tokens!');
-    console.log(`Access Token: ${access_token}`);
-    console.log(`Refresh Token: ${refresh_token}`);
-    console.log(`Access Token Expires At: ${new Date(expires_at * 1000).toLocaleString()}`);
+    // SECURITY: Do not log tokens or credentials to stdout. Token output here
+    // has leaked into logs/scrollback before; keep logs free of secret material.
+    console.log(`Access Token expires at: ${new Date(expires_at * 1000).toLocaleString()}`);
 
 
     const save = await promptUser('\nDo you want to save these tokens to your .env file? (yes/no): ');
