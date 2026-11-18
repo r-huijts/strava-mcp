@@ -134,7 +134,7 @@ That's it! You only need to do this once.
 
 - **Check status**: "Am I connected to Strava?"
 - **Reconnect**: "Connect my Strava account" (use `force: true` to reconnect)
-- **Disconnect**: "Disconnect my Strava account"
+- **Disconnect**: "Disconnect my Strava account" (revokes access on Strava and removes stored credentials; use `revoke: false` to only remove the stored credentials)
 
 ---
 
@@ -250,7 +250,7 @@ Then point Claude to your local build:
 |------------------|--------------|
 | "Connect my Strava account" | Links your Strava to Claude |
 | "Check my Strava connection" | Shows connection status |
-| "Disconnect my Strava account" | Unlinks Strava and clears stored tokens |
+| "Disconnect my Strava account" | Revokes access on Strava and clears stored tokens |
 | "Get my Strava profile" | Shows your profile info |
 | "What shoes do I have?" | Lists your shoes and usage distance |
 | "What are my training zones?" | Shows HR and power zones |
@@ -364,6 +364,17 @@ Instead of using the browser-based auth, you can set environment variables:
 | `STRAVA_ACCESS_TOKEN` | OAuth access token |
 | `STRAVA_REFRESH_TOKEN` | OAuth refresh token |
 | `ROUTE_EXPORT_PATH` | Directory for GPX/TCX exports |
+| `STRAVA_API_BASE_URL` | Overrides the Strava API base URL (default: `https://www.strava.com/api/v3`) |
+
+### Strava API Base URL Change
+
+Strava is moving its API from `https://www.strava.com/api/v3` to `https://www.api-v3.strava.com`. Strava requires the new URL from June 1, 2027 and says it becomes available on January 4, 2027. Until then the server keeps using the current URL by default. Once the new URL is live you can switch without waiting for a release:
+
+```
+STRAVA_API_BASE_URL=https://www.api-v3.strava.com
+```
+
+Strava has not announced a change to the OAuth endpoints (`https://www.strava.com/oauth/...`), so those stay as they are.
 
 ### Token Refresh
 
