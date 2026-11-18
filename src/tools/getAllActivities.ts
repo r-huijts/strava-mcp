@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getAllActivities as fetchAllActivities } from "../stravaClient.js";
+import { formatStravaId, resolveStravaId } from "../ids.js";
 
 // Common activity types
 export const ACTIVITY_TYPES = {
@@ -66,10 +67,11 @@ function formatActivitySummary(activity: any): string {
     const distance = activity.distance ? `${(activity.distance / 1000).toFixed(2)} km` : 'N/A';
     const duration = activity.moving_time ? formatDuration(activity.moving_time) : 'N/A';
     const type = activity.sport_type || activity.type || 'Unknown';
-    const activityId = activity.id ?? 'N/A';
+    const resolvedId = resolveStravaId(activity);
 
-    const stravaUrl = activityId !== 'N/A' ? `https://www.strava.com/activities/${activityId}` : '';
-    return `${type} ${activity.name} (ID: ${activityId}) - ${distance} in ${duration} on ${date}${stravaUrl ? `\n   URL: ${stravaUrl}` : ''}`;
+    // Only link when the ID is exact; a rounded ID would point at a different activity.
+    const stravaUrl = resolvedId?.exact ? `https://www.strava.com/activities/${resolvedId.id}` : '';
+    return `${type} ${activity.name} (ID: ${formatStravaId(activity)}) - ${distance} in ${duration} on ${date}${stravaUrl ? `\n   URL: ${stravaUrl}` : ''}`;
 }
 
 // Helper function to format duration

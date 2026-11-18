@@ -1,4 +1,5 @@
 import { getAuthenticatedAthlete } from "../stravaClient.js";
+import { formatStravaId } from "../ids.js";
 
 // Export the tool definition directly
 export const getAthleteProfile = {
@@ -20,10 +21,11 @@ export const getAthleteProfile = {
       try {
         console.error("Fetching athlete profile...");
         const athlete = await getAuthenticatedAthlete(token);
-        console.error(`Successfully fetched profile for ${athlete.firstname} ${athlete.lastname} (ID: ${athlete.id}).`);
+        const athleteId = formatStravaId(athlete);
+        console.error(`Successfully fetched profile for ${athlete.firstname} ${athlete.lastname} (ID: ${athleteId}).`);
 
         const profileParts = [
-          `👤 **Profile for ${athlete.firstname} ${athlete.lastname}** (ID: ${athlete.id})`,
+          `👤 **Profile for ${athlete.firstname} ${athlete.lastname}** (ID: ${athleteId})`,
           `   - Username: ${athlete.username || 'N/A'}`,
           `   - Location: ${[athlete.city, athlete.state, athlete.country].filter(Boolean).join(", ") || 'N/A'}`,
           `   - Sex: ${athlete.sex || 'N/A'}`,

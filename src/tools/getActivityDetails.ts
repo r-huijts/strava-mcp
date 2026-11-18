@@ -1,6 +1,7 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import { formatLocalDateTime } from "../formatters.js";
+import { formatStravaId, stravaIdSchema } from "../ids.js";
 import {
     getActivityById as fetchActivityById,
     StravaDetailedActivity // Type needed for formatter
@@ -9,7 +10,7 @@ import {
 
 // Zod schema for input validation
 const GetActivityDetailsInputSchema = z.object({
-    activityId: z.number().int().positive().describe("The unique identifier of the activity to fetch details for.")
+    activityId: stravaIdSchema("The unique identifier of the activity to fetch details for.")
 });
 
 type GetActivityDetailsInput = z.infer<typeof GetActivityDetailsInputSchema>;
@@ -61,7 +62,7 @@ function formatActivityDetails(activity: StravaDetailedActivity): string {
     const maxSpeed = formatSpeed(activity.max_speed);
     const avgPace = formatPace(activity.average_speed); // Calculate pace from speed
     
-    let details = `🏃 **${activity.name}** (ID: ${activity.id})\n`;
+    let details = `🏃 **${activity.name}** (ID: ${formatStravaId(activity)})\n`;
     details += `   - Type: ${activity.type} (${activity.sport_type})\n`;
     details += `   - Date: ${date}\n`;
     details += `   - Moving Time: ${movingTime}, Elapsed Time: ${elapsedTime}\n`;

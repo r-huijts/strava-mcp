@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { stravaApi } from '../stravaClient.js';
+import { stravaIdSchema } from '../ids.js';
 
 // Define stream types available in Strava API
 const STREAM_TYPES = [
@@ -12,7 +13,7 @@ const RESOLUTION_TYPES = ['low', 'medium', 'high'] as const;
 
 // Input schema using Zod
 export const inputSchema = z.object({
-    id: z.number().or(z.string()).describe(
+    id: stravaIdSchema(
         'The Strava activity identifier to fetch streams for. This can be obtained from activity URLs or the get-activities tool.'
     ),
     types: z.array(z.enum(STREAM_TYPES))

@@ -27,6 +27,7 @@ stravaApi.interceptors.request.use(config => {
 // Define the expected structure of a Strava activity (add more fields as needed)
 const StravaActivitySchema = z.object({
     id: z.number().int().optional(), // Include ID for recent activities
+    id_str: z.string().nullish(), // Same ID as a string; exact for 64-bit IDs
     name: z.string(),
     distance: z.number(),
     start_date: z.string().datetime(),
@@ -43,6 +44,7 @@ const StravaActivitiesResponseSchema = z.array(StravaActivitySchema);
 // Define the expected structure for the Authenticated Athlete response
 const BaseAthleteSchema = z.object({
     id: z.number().int(),
+    id_str: z.string().nullish(), // Same ID as a string; exact for 64-bit IDs
     resource_state: z.number().int(),
 });
 const DetailedAthleteSchema = BaseAthleteSchema.extend({
@@ -210,6 +212,7 @@ export type StravaExplorerResponse = z.infer<typeof ExplorerResponseSchema>;
 // Based on https://developers.strava.com/docs/reference/#api-models-DetailedActivity
 const DetailedActivitySchema = z.object({
     id: z.number().int(),
+    id_str: z.string().nullish(), // Same ID as a string; exact for 64-bit IDs
     resource_state: z.number().int(), // Should be 3 for detailed
     athlete: BaseAthleteSchema, // Contains athlete ID
     name: z.string(),
@@ -267,6 +270,7 @@ export type StravaDetailedActivity = z.infer<typeof DetailedActivitySchema>;
 // Based on https://developers.strava.com/docs/reference/#api-models-MetaActivity
 const MetaActivitySchema = z.object({
     id: z.number().int(),
+    id_str: z.string().nullish(), // Not in Strava's MetaActivity model today; kept if it is ever sent
 });
 
 // BaseAthleteSchema serves as MetaAthleteSchema (id only needed for effort)
@@ -598,7 +602,7 @@ export async function getAuthenticatedAthlete(accessToken: string): Promise<Stra
  * @returns A promise that resolves to the athlete's activity statistics.
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
-export async function getAthleteStats(accessToken: string, athleteId: number): Promise<StravaStats> {
+export async function getAthleteStats(accessToken: string, athleteId: number | string): Promise<StravaStats> {
     if (!accessToken) {
         throw new Error("Strava access token is required.");
     }
@@ -636,7 +640,7 @@ export async function getAthleteStats(accessToken: string, athleteId: number): P
  * @returns A promise that resolves to the detailed activity data.
  * @throws Throws an error if the API request fails or the response format is unexpected.
  */
-export async function getActivityById(accessToken: string, activityId: number): Promise<StravaDetailedActivity> {
+export async function getActivityById(accessToken: string, activityId: number | string): Promise<StravaDetailedActivity> {
     if (!accessToken) {
         throw new Error("Strava access token is required.");
     }
@@ -1292,7 +1296,7 @@ export async function getAthleteZones(accessToken: string): Promise<StravaAthlet
  */
 export async function getActivityPhotos(
     accessToken: string,
-    activityId: number,
+    activityId: number | string,
     size: number = 2048
 ): Promise<StravaPhoto[]> {
     if (!accessToken) {

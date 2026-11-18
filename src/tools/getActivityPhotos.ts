@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getActivityPhotos as getActivityPhotosClient } from "../stravaClient.js";
+import { stravaIdSchema } from "../ids.js";
 
 const name = "get-activity-photos";
 
@@ -33,7 +34,7 @@ Notes:
 `;
 
 const inputSchema = z.object({
-    id: z.union([z.number(), z.string()]).describe("The identifier of the activity to fetch photos for."),
+    id: stravaIdSchema("The identifier of the activity to fetch photos for."),
     size: z.number().int().positive().optional().describe("Optional photo size in pixels (e.g., 100, 600, 2048)."),
 });
 
@@ -55,15 +56,8 @@ export const getActivityPhotosTool = {
         }
 
         try {
-            // Convert id to number if it's a string
-            const activityId = typeof id === 'string' ? parseInt(id, 10) : id;
-
-            if (isNaN(activityId)) {
-                return {
-                    content: [{ type: "text" as const, text: `Invalid activity ID: ${id}` }],
-                    isError: true
-                };
-            }
+            // Keep the ID as a string: parsing it to a number would round 64-bit IDs.
+            const activityId = id;
 
             console.error(`Fetching photos for activity ID: ${activityId}...`);
             const photos = await getActivityPhotosClient(token, activityId, size);
