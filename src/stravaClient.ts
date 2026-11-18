@@ -1,14 +1,47 @@
 import axios from "axios";
 import { z } from "zod";
 
+// --- API base URL ---
+// Strava is moving the API from https://www.strava.com/api/v3 to
+// https://www.api-v3.strava.com. Strava requires the new URL from June 1, 2027
+// and says it becomes available on January 4, 2027. Until the new host is live
+// the default stays on the current URL; STRAVA_API_BASE_URL lets the switch be
+// made without a code change.
+export const DEFAULT_STRAVA_API_BASE_URL = 'https://www.strava.com/api/v3';
+
+/**
+ * Returns the API base URL to use: STRAVA_API_BASE_URL when set, otherwise the default.
+ * @throws If STRAVA_API_BASE_URL is set but is not a valid http(s) URL.
+ */
+export function getStravaApiBaseUrl(): string {
+    const override = process.env.STRAVA_API_BASE_URL?.trim();
+    if (!override) return DEFAULT_STRAVA_API_BASE_URL;
+
+    let protocol: string;
+    try {
+        protocol = new URL(override).protocol;
+    } catch {
+        throw new Error(`STRAVA_API_BASE_URL is not a valid URL: "${override}"`);
+    }
+    if (protocol !== 'https:' && protocol !== 'http:') {
+        throw new Error(`STRAVA_API_BASE_URL must be an http(s) URL: "${override}"`);
+    }
+    return override.replace(/\/+$/, '');
+}
+
 // --- Axios Instance & Interceptor --- 
 // Create an Axios instance to apply interceptors globally for this client
 export const stravaApi = axios.create({
-    baseURL: 'https://www.strava.com/api/v3'
+    baseURL: DEFAULT_STRAVA_API_BASE_URL
 });
 
 // Add a request interceptor (can be used for logging or modifying requests)
 stravaApi.interceptors.request.use(config => {
+    // Resolved per request rather than at creation: server.ts loads the .env
+    // file after this module has been evaluated.
+    if (process.env.STRAVA_API_BASE_URL?.trim()) {
+        config.baseURL = getStravaApiBaseUrl();
+    }
     // REMOVE DEBUG LOGS - Interfere with MCP Stdio transport
     // let authHeaderLog = 'Not Set';
     // const authHeaderValue = config.headers?.Authorization;
@@ -372,6 +405,34 @@ async function refreshAccessToken(): Promise<string> {
         console.error('Failed to refresh access token:', error);
         throw new Error(`Failed to refresh Strava access token: ${error instanceof Error ? error.message : String(error)}`);
     }
+}
+
+const STRAVA_OAUTH_REVOKE_URL = 'https://www.strava.com/oauth/revoke';
+
+export interface RevokeTokenParams {
+    /** The access token or refresh token to revoke. */
+    token: string;
+    clientId: string;
+    clientSecret: string;
+    tokenTypeHint?: 'access_token' | 'refresh_token';
+}
+
+/**
+ * Revokes a Strava token through the oauth/revoke endpoint, the replacement for
+ * oauth/deauthorize (retired June 1, 2027). Revoking a refresh token also
+ * revokes its access tokens, and vice versa. Strava answers 200 whether or not
+ * the token was found.
+ * @throws If the request fails, for example with 401 for wrong client credentials.
+ */
+export async function revokeToken({ token, clientId, clientSecret, tokenTypeHint }: RevokeTokenParams): Promise<void> {
+    const body = new URLSearchParams({ token });
+    if (tokenTypeHint) body.set('token_type_hint', tokenTypeHint);
+
+    await axios.post(STRAVA_OAUTH_REVOKE_URL, body.toString(), {
+        auth: { username: clientId, password: clientSecret },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 10000,
+    });
 }
 
 /**

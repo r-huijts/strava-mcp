@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { loadConfig, hasValidTokens, hasClientCredentials, getConfigPath } from '../config.js';
+import { loadConfig, clearConfig, hasValidTokens, hasClientCredentials, getConfigPath } from '../config.js';
 import { startAuthServer, getAuthUrl } from '../auth/server.js';
-import { getAuthenticatedAthlete } from '../stravaClient.js';
+import { getAuthenticatedAthlete, revokeToken } from '../stravaClient.js';
 
 // Dynamic import for 'open' package (ESM)
 async function openBrowser(url: string): Promise<void> {
@@ -86,13 +86,52 @@ export const connectStravaTool = {
     },
 };
 
+/**
+ * Asks Strava to revoke the stored token. Never throws: disconnecting must
+ * still remove the local credentials when Strava cannot be reached.
+ * Returns a sentence describing what happened on Strava's side.
+ */
+async function revokeStoredToken(): Promise<string> {
+    const config = await loadConfig();
+    // Revoking the refresh token also revokes its access tokens.
+    const token = config.refreshToken || config.accessToken;
+
+    if (!token) {
+        return 'There was no stored token to revoke on Strava.';
+    }
+    if (!hasClientCredentials(config)) {
+        return '⚠️ Access was not revoked on Strava because the Client ID and Client Secret are missing. You can remove the app at https://www.strava.com/settings/apps.';
+    }
+
+    try {
+        await revokeToken({
+            token,
+            clientId: config.clientId!,
+            clientSecret: config.clientSecret!,
+            tokenTypeHint: config.refreshToken ? 'refresh_token' : 'access_token',
+        });
+        return 'Access was revoked on Strava.';
+    } catch (error: any) {
+        console.error('Could not revoke Strava token:', error?.message ?? error);
+        return `⚠️ Access could not be revoked on Strava (${error?.message ?? 'unknown error'}), so the token may still be valid. You can remove the app at https://www.strava.com/settings/apps.`;
+    }
+}
+
 export const disconnectStravaTool = {
     name: 'disconnect-strava',
-    description: 'Disconnect your Strava account and remove stored credentials. Use this when the user wants to logout, disconnect, or remove their Strava connection.',
-    inputSchema: z.object({}),
-    execute: async (): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
+    description: 'Disconnect your Strava account: revokes access on Strava and removes stored credentials. Use this when the user wants to logout, disconnect, or remove their Strava connection.',
+    inputSchema: z.object({
+        revoke: z.boolean().optional().describe('Revoke the token on Strava as well (default: true). Set to false to only remove the locally stored credentials, for example when other tools share the same Strava API application.'),
+    }),
+    execute: async (args: { revoke?: boolean } = {}): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
+        const { revoke = true } = args;
+
         try {
-            const { clearConfig } = await import('../config.js');
+            // Revoke before clearing: clearing removes the credentials the revoke call needs.
+            const revokeStatus = revoke
+                ? await revokeStoredToken()
+                : 'Access was not revoked on Strava.';
+
             await clearConfig();
             
             // Clear from process.env as well
@@ -102,7 +141,7 @@ export const disconnectStravaTool = {
             return {
                 content: [{
                     type: 'text' as const,
-                    text: '✅ Disconnected from Strava. Your credentials have been removed.\n\nTo reconnect, just say "Connect my Strava account".',
+                    text: `✅ Disconnected from Strava. Your stored credentials have been removed.\n${revokeStatus}\n\nTo reconnect, just say "Connect my Strava account".`,
                 }],
             };
         } catch (error: any) {

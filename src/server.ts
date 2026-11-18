@@ -212,7 +212,7 @@ server.tool(
 server.tool(
     disconnectStravaTool.name,
     disconnectStravaTool.description,
-    {},
+    disconnectStravaTool.inputSchema?.shape ?? {},
     disconnectStravaTool.execute
 );
 server.tool(
