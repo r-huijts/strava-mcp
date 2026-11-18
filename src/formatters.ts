@@ -1,4 +1,5 @@
 import { StravaRoute } from './stravaClient';
+import { formatStravaId } from './ids.js';
 
 /**
  * Converts meters to kilometers, rounding to 2 decimal places.
@@ -32,7 +33,7 @@ export function formatRouteSummary(route: StravaRoute): string {
     const date = formatLocalDate(route.created_at);
     const type = route.type === 1 ? 'Ride' : route.type === 2 ? 'Run' : 'Walk'; // Assuming 3 is Walk based on typical Strava usage
 
-    let summary = `📍 Route: ${route.name} (#${route.id})\n`;
+    let summary = `📍 Route: ${route.name} (#${formatStravaId(route)})\n`;
     summary += `   - Type: ${type}, Distance: ${distanceKm}, Elevation: ${elevation}\n`;
     summary += `   - Created: ${date}, Segments: ${route.segments?.length ?? 'N/A'}\n`;
     if (route.description) {

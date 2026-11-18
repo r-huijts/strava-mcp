@@ -1,6 +1,7 @@
 // import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"; // Removed
 import { z } from "zod";
 import { formatLocalDateTime } from "../formatters.js";
+import { formatStravaId } from "../ids.js";
 import {
     StravaDetailedSegmentEffort,
     getSegmentEffort as fetchSegmentEffort,
@@ -42,7 +43,7 @@ function formatSegmentEffort(effort: StravaDetailedSegmentEffort): string {
     // const avgPace = formatPace(effort.average_speed);
 
     let details = `⏱️ **Segment Effort: ${effort.name}** (ID: ${effort.id})\n`;
-    details += `   - Activity ID: ${effort.activity.id}, Athlete ID: ${effort.athlete.id}\n`;
+    details += `   - Activity ID: ${formatStravaId(effort.activity)}, Athlete ID: ${formatStravaId(effort.athlete)}\n`;
     details += `   - Segment ID: ${effort.segment.id}\n`;
     details += `   - Date: ${formatLocalDateTime(effort.start_date_local)}\n`;
     details += `   - Moving Time: ${movingTime}, Elapsed Time: ${elapsedTime}\n`;

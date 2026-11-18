@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getActivityLaps as getActivityLapsClient } from "../stravaClient.js";
 import { formatDuration } from "../server.js"; // Import helper
+import { stravaIdSchema } from "../ids.js";
 
 const name = "get-activity-laps";
 
@@ -35,7 +36,7 @@ Notes:
 `;
 
 const inputSchema = z.object({
-    id: z.union([z.number(), z.string()]).describe("The identifier of the activity to fetch laps for."),
+    id: stravaIdSchema("The identifier of the activity to fetch laps for."),
 });
 
 type GetActivityLapsInput = z.infer<typeof inputSchema>;

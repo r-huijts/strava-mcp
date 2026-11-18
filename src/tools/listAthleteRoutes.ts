@@ -5,6 +5,7 @@ import {
     StravaRoute,
     // StravaRoute is needed for the formatter
 } from "../stravaClient.js";
+import { formatStravaId } from "../ids.js";
 // Remove the imported formatter since we're defining our own locally
 // import { formatRouteSummary } from "../formatters.js";
 
@@ -22,7 +23,7 @@ function formatRouteSummary(route: StravaRoute): string {
     const distance = route.distance ? `${(route.distance / 1000).toFixed(1)} km` : 'N/A';
     const elevation = route.elevation_gain ? `${route.elevation_gain.toFixed(0)} m` : 'N/A';
     
-    return `🗺️ **${route.name}** (ID: ${route.id})
+    return `🗺️ **${route.name}** (ID: ${formatStravaId(route)})
    - Distance: ${distance}
    - Elevation: ${elevation}
    - Created: ${new Date(route.created_at).toLocaleDateString()}

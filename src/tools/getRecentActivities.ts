@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { getRecentActivities as fetchActivities, getAuthenticatedAthlete } from "../stravaClient.js";
+import { formatStravaId } from "../ids.js";
 // Reverted SDK type imports
 
 const GetRecentActivitiesInputSchema = z.object({
@@ -52,7 +53,7 @@ export const getRecentActivities = {
           // Ensure each item conforms to { type: "text", text: string }
           const item: { type: "text", text: string } = {
              type: "text" as const,
-             text: `${activity.type || activity.sport_type} ${activity.name} (ID: ${activity.id ?? 'N/A'}) — ${distanceStr} on ${dateStr}`
+             text: `${activity.type || activity.sport_type} ${activity.name} (ID: ${formatStravaId(activity)}) — ${distanceStr} on ${dateStr}`
             };
           return item;
         });
